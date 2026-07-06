@@ -1,16 +1,73 @@
 name: Build and Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0). If empty, auto-increments the patch version of the latest release tag.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Prepare Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history and tags
+
+      - name: Determine Version
+        id: get_version
+        run: |
+          git fetch --tags --force
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          
+          if [ -n "$INPUT_VERSION" ]; then
+            if [[ ! "$INPUT_VERSION" =~ ^v ]]; then
+              TAG_VERSION="v$INPUT_VERSION"
+            else
+              TAG_VERSION="$INPUT_VERSION"
+            fi
+            VERSION_NUM="${TAG_VERSION#v}"
+          else
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            echo "Latest tag found: $LATEST_TAG"
+            CLEAN_TAG="${LATEST_TAG#v}"
+            IFS='.' read -r major minor patch <<< "$CLEAN_TAG"
+            if [[ "$major" =~ ^[0-9]+$ ]] && [[ "$minor" =~ ^[0-9]+$ ]] && [[ "$patch" =~ ^[0-9]+$ ]]; then
+              next_patch=$((patch + 1))
+              VERSION_NUM="$major.$minor.$next_patch"
+              TAG_VERSION="v$VERSION_NUM"
+            else
+              VERSION_NUM="0.1.0"
+              TAG_VERSION="v0.1.0"
+            fi
+          fi
+          
+          echo "Determined Version: $VERSION_NUM"
+          echo "Determined Tag: $TAG_VERSION"
+          echo "version=$VERSION_NUM" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create and Push Git Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          TAG="${{ steps.get_version.outputs.tag }}"
+          git tag "$TAG"
+          git push origin "$TAG" --force
+
   build:
     name: Build & Publish for ${{ matrix.runtime }}
+    needs: prepare
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,7 +87,7 @@ jobs:
 
       - name: Publish Binaries
         run: |
-          dotnet publish NyxAssetsEditor.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -o publish/${{ matrix.runtime }}
+          dotnet publish NyxAssetsEditor.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:Version=${{ needs.prepare.outputs.version }} -o publish/${{ matrix.runtime }}
 
       - name: Archive Release Assets (Windows)
         if: matrix.runtime == 'win-x64'
@@ -66,7 +123,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -86,6 +143,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Release ${{ needs.prepare.outputs.tag }}
           files: release_assets/*
           draft: false
           prerelease: false
