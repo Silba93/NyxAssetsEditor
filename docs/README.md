@@ -1,3 +1,6 @@
+> [!NOTE]
+> **Disclaimer:** Currently this project has **no license**. Please note that "no license" does not mean it is open-source; it means the code is private property and fully mine. As per GitHub's Terms of Service, I, Tofame, retain 100% of my undisputed rights to this repository. In the future there might be added a license which allows for great freedom of usage, however for now, I do not wish to ponder over which one would be good.
+
 # Nyx Assets Editor
 
 Desktop editor for Nyx sprite archives (`.spr` / `.assets`) and things catalogs (`.dat` / `.things`), built with **Avalonia 12** and **NyxAssets 0.2+**.
