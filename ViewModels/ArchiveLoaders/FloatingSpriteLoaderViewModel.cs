@@ -719,11 +719,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			if (ext == ".spr")
 			{
-				Loader.WriteSprTo(path);
+				Loader.WriteSprSnapshotTo(path);
 			}
 			else
 			{
-				Loader.WriteAssetsTo(path);
+				Loader.WriteAssetsSnapshotTo(path);
 			}
 			return path;
 		}

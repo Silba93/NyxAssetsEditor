@@ -200,6 +200,32 @@ public class SpriteLoader : IDisposable
         ms.CopyTo(output);
     }
 
+    public void WriteSprSnapshotTo(string path)
+    {
+        if (_archive_spr == null)
+            throw new InvalidOperationException("No .spr archive is open.");
+
+        using var ms = new MemoryStream();
+        _archive_spr.WriteToStream(ms);
+
+        using var output = File.Create(path);
+        ms.Position = 0;
+        ms.CopyTo(output);
+    }
+
+    public void WriteAssetsSnapshotTo(string path)
+    {
+        if (_archive_assets == null)
+            throw new InvalidOperationException("No .assets archive is open.");
+
+        using var ms = new MemoryStream();
+        _archive_assets.WriteToStream(ms);
+
+        using var output = File.Create(path);
+        ms.Position = 0;
+        ms.CopyTo(output);
+    }
+
     public bool RemoveSprite(uint spriteId)
     {
         if (_archive_spr != null)
