@@ -772,8 +772,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_undoRedoStack == null)
 				return;
 
-			var dummyCurrent = new Services.Archive.SpriteUndoAction();
-			var action = _undoRedoStack.Undo(dummyCurrent);
+			var action = _undoRedoStack.PopUndo();
 			if (action != null)
 			{
 				while (Loader.SpriteCount > action.SpriteCountBefore)
@@ -818,8 +817,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_undoRedoStack == null)
 				return;
 
-			var dummyCurrent = new Services.Archive.SpriteUndoAction();
-			var action = _undoRedoStack.Redo(dummyCurrent);
+			var action = _undoRedoStack.PopRedo();
 			if (action != null)
 			{
 				while (Loader.SpriteCount > action.SpriteCountAfter)

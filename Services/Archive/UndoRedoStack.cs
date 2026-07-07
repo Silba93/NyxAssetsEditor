@@ -69,6 +69,44 @@ namespace NyxAssetsEditor.Services.Archive
 			return next;
 		}
 
+		public T? PopUndo()
+		{
+			if (_undoList.Count == 0)
+				return default;
+
+			var action = _undoList[_undoList.Count - 1];
+			_undoList.RemoveAt(_undoList.Count - 1);
+			_redoList.Add(action);
+
+			if (_redoList.Count > _maxCapacity)
+			{
+				var removed = _redoList[0];
+				_redoList.RemoveAt(0);
+				DisposeState(removed);
+			}
+
+			return action;
+		}
+
+		public T? PopRedo()
+		{
+			if (_redoList.Count == 0)
+				return default;
+
+			var action = _redoList[_redoList.Count - 1];
+			_redoList.RemoveAt(_redoList.Count - 1);
+			_undoList.Add(action);
+
+			if (_undoList.Count > _maxCapacity)
+			{
+				var removed = _undoList[0];
+				_undoList.RemoveAt(0);
+				DisposeState(removed);
+			}
+
+			return action;
+		}
+
 		public void Clear()
 		{
 			foreach (var state in _undoList) DisposeState(state);

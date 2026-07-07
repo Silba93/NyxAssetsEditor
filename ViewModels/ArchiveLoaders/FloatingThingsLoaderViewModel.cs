@@ -1418,10 +1418,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_undoRedoStack == null || _catalog == null)
 				return;
 
-			var dummyCurrent = new Services.Archive.ThingUndoAction();
-			var action = _undoRedoStack.Undo(dummyCurrent);
+			var action = _undoRedoStack.PopUndo();
 			if (action != null)
 			{
+				int prevPage = CurrentPage;
+
 				RevertCounts(action.ItemCountBefore, action.OutfitCountBefore, action.EffectCountBefore, action.MissileCountBefore);
 
 				foreach (var kind in new[] { ThingKind.Item, ThingKind.Outfit, ThingKind.Effect, ThingKind.Missile })
@@ -1444,6 +1445,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				HasSavedChanges = action.HasSavedChangesBefore;
 
 				ReloadThingsForSection();
+
+				int maxPage = TotalPages;
+				CurrentPage = Math.Clamp(prevPage, 1, maxPage);
 			}
 			RefreshUndoRedoCommands();
 		}
@@ -1454,10 +1458,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_undoRedoStack == null || _catalog == null)
 				return;
 
-			var dummyCurrent = new Services.Archive.ThingUndoAction();
-			var action = _undoRedoStack.Redo(dummyCurrent);
+			var action = _undoRedoStack.PopRedo();
 			if (action != null)
 			{
+				int prevPage = CurrentPage;
+
 				RevertCounts(action.ItemCountAfter, action.OutfitCountAfter, action.EffectCountAfter, action.MissileCountAfter);
 
 				foreach (var kind in new[] { ThingKind.Item, ThingKind.Outfit, ThingKind.Effect, ThingKind.Missile })
@@ -1480,6 +1485,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				HasSavedChanges = action.HasSavedChangesAfter;
 
 				ReloadThingsForSection();
+
+				int maxPage = TotalPages;
+				CurrentPage = Math.Clamp(prevPage, 1, maxPage);
 			}
 			RefreshUndoRedoCommands();
 		}
