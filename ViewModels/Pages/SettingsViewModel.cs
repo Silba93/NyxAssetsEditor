@@ -72,7 +72,23 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		}
 
 		public static uint ThingIdOffset { get; set; } = 0;
-		public static uint ClientVersion { get; set; } = 1098;
+
+		private static uint _clientVersion = 1098;
+		public static uint ClientVersion
+		{
+			get => _clientVersion;
+			set
+			{
+				if (_clientVersion != value)
+				{
+					_clientVersion = value;
+					_selectedVersionIndex = System.Math.Max(0, NyxAssetsEditor.ViewModels.Common.ClientVersion.AvailableVersions.FindIndex(v => v.Version == value));
+					ClientVersionChanged?.Invoke(value);
+					NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+				}
+			}
+		}
+
 
 		private static uint _itemAnimationDurationMs = 500;
 		private static uint _outfitAnimationDurationMs = 300;
@@ -255,7 +271,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			_preloadGraphicalAssets = preloadGraphicalAssets;
 			_assetDisplaySize = assetDisplaySize;
 			ThingIdOffset = thingIdOffset;
-			ClientVersion = clientVersion;
+			_clientVersion = clientVersion;
 			_selectedVersionIndex = System.Math.Max(0, NyxAssetsEditor.ViewModels.Common.ClientVersion.AvailableVersions.FindIndex(v => v.Version == clientVersion));
 			ItemAnimationDurationMs = itemAnimationDurationMs;
 			OutfitAnimationDurationMs = outfitAnimationDurationMs;
@@ -302,16 +318,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				{
 					ClientVersion = value.Version;
 					OnPropertyChanged(nameof(SelectedVersion));
-
-					int idx = AvailableVersions.IndexOf(value);
-					if (idx >= 0 && _selectedVersionIndex != idx)
-					{
-						_selectedVersionIndex = idx;
-						OnPropertyChanged(nameof(SelectedVersionIndex));
-					}
-
-					ClientVersionChanged?.Invoke(ClientVersion);
-					NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+					OnPropertyChanged(nameof(SelectedVersionIndex));
 				}
 			}
 		}
@@ -325,15 +332,11 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			{
 				if (_selectedVersionIndex != value)
 				{
-					_selectedVersionIndex = value;
-					OnPropertyChanged(nameof(SelectedVersionIndex));
-
 					if (value >= 0 && value < AvailableVersions.Count)
 					{
 						ClientVersion = AvailableVersions[value].Version;
 						OnPropertyChanged(nameof(SelectedVersion));
-						ClientVersionChanged?.Invoke(ClientVersion);
-						NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+						OnPropertyChanged(nameof(SelectedVersionIndex));
 					}
 				}
 			}
@@ -491,13 +494,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				1000 => 4,
 				_ => 1
 			};
-			_selectedVersionIndex = ClientVersion switch
-			{
-				1098 => 0,
-				860 => 1,
-				760 => 2,
-				_ => 0
-			};
+			_selectedVersionIndex = System.Math.Max(0, AvailableVersions.FindIndex(v => v.Version == ClientVersion));
 			_selectedDisplaySizeIndex = AssetDisplaySize switch
 			{
 				32 => 0,

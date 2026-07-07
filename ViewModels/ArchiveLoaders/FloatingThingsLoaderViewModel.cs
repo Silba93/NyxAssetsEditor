@@ -430,7 +430,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				item.NotifyDisplayedIdChanged();
 		}
 
-		private void OnClientVersionChanged(uint newVersion) => ResetSettingsToDefaults();
+		private void OnClientVersionChanged(uint newVersion)
+		{
+			if (UseSuggestedSettings)
+				ResetSettingsToDefaults();
+		}
 
 		public void ResetSettingsToDefaults()
 		{
@@ -743,12 +747,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 						OnPropertyChanged(nameof(IsArchiveLoaded));
 						return;
 					}
-					else if (UseSuggestedSettings)
+					else
 					{
-						var version = new ClientDataVersion { Value = versionEntry.Version };
-						UseExtendedThingIds = DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
-						UseFrameAnimations = DatThingFormatRules.UsesImprovedAnimationsByDefault(version);
-						UseFrameGroups = DatThingFormatRules.UsesOutfitFrameGroupsByDefault(version);
+						SettingsViewModel.ClientVersion = versionEntry.Version;
 					}
 				}
 			}
