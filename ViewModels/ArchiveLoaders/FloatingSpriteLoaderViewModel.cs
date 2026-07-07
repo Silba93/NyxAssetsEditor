@@ -28,7 +28,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useSuggestedSettings = true;
 		private bool _showSaveConfirmation;
 		private string _jumpToIdText = string.Empty;
-		private Services.Archive.UndoRedoStack<string>? _undoRedoStack;
+		private Services.Archive.UndoRedoStack<Services.Archive.SpriteUndoAction>? _undoRedoStack;
+		private Services.Archive.SpriteUndoAction? _currentAction;
 
 		private bool _hasSavedChanges;
 		public bool HasSavedChanges
@@ -240,7 +241,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		{
 			_renderer = renderer;
 			SettingsViewModel.AssetDisplaySizeChanged += OnAssetDisplaySizeChanged;
-			_undoRedoStack = new Services.Archive.UndoRedoStack<string>(SettingsViewModel.UndoLimit);
+			_undoRedoStack = new Services.Archive.UndoRedoStack<Services.Archive.SpriteUndoAction>(SettingsViewModel.UndoLimit);
 		}
 
 		public void Dispose()
@@ -451,7 +452,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (targets.Count == 0 || clipboard.Count == 0)
 				return;
 
-			PushUndoState();
+			var targetIds = targets.Select(t => t.Id).ToList();
+			StartSpriteTransaction(targetIds);
 
 			for (var i = 0; i < targets.Count; i++)
 			{
@@ -462,6 +464,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				if (!AddedSpriteIds.Contains(targets[i].Id))
 					ModifiedSpriteIds.Add(targets[i].Id);
 			}
+
+			EndSpriteTransaction(targetIds);
 		}
 
 		public void RequestImportSprites(IEnumerable<SpriteViewModel> sprites)
@@ -490,9 +494,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public void ReplaceSpritePixels(IEnumerable<SpriteViewModel> sprites, byte[] rgba)
 		{
-			PushUndoState();
+			var targetsList = sprites.ToList();
+			var targetIds = targetsList.Select(t => t.Id).ToList();
+			StartSpriteTransaction(targetIds);
 
-			foreach (var sprite in sprites)
+			foreach (var sprite in targetsList)
 			{
 				Loader.SetSpritePixels(sprite.Id, rgba);
 				sprite.InvalidatePreview();
@@ -500,6 +506,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				if (!AddedSpriteIds.Contains(sprite.Id))
 					ModifiedSpriteIds.Add(sprite.Id);
 			}
+
+			EndSpriteTransaction(targetIds);
 		}
 
 		public void NotifyExternalArchiveMutation()
@@ -519,7 +527,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (ids.Count == 0)
 				return;
 
-			PushUndoState();
+			StartSpriteTransaction(ids);
 
 			foreach (var id in ids)
 			{
@@ -545,12 +553,15 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				UpdatePage();
 
 			NotifySelectionChanged();
+
+			EndSpriteTransaction(ids);
 		}
 
 		[RelayCommand(CanExecute = nameof(IsArchiveLoaded))]
 		private void NewSprite()
 		{
-			PushUndoState();
+			var newId = Loader.SpriteCount + 1;
+			StartSpriteTransaction(new[] { newId });
 
 			Loader.AddNewSprite();
 			TotalSprites = Loader.SpriteCount;
@@ -566,6 +577,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			var newSprite = PagedSprites.LastOrDefault();
 			if (newSprite != null)
 				SelectSprite(newSprite);
+
+			EndSpriteTransaction(new[] { newId });
 		}
 
 		public void NotifyPasteAvailability()
@@ -710,93 +723,137 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			OnPropertyChanged(nameof(GridTileHeight));
 		}
 
-		private string SaveSnapshot()
+		private void StartSpriteTransaction(IEnumerable<uint> affectedIds)
 		{
-			string tempDir = Path.Combine(AppContext.BaseDirectory, "temp_undo", Guid.NewGuid().ToString());
-			Directory.CreateDirectory(tempDir);
-			string ext = FilePath.EndsWith(".assets", StringComparison.OrdinalIgnoreCase) ? ".assets" : ".spr";
-			string path = Path.Combine(tempDir, "snapshot" + ext);
+			_currentAction = new Services.Archive.SpriteUndoAction
+			{
+				SpriteCountBefore = Loader.SpriteCount,
+				HasSavedChangesBefore = HasSavedChanges,
+				AddedBefore = new HashSet<uint>(AddedSpriteIds),
+				RemovedBefore = new HashSet<uint>(RemovedSpriteIds),
+				ModifiedBefore = new HashSet<uint>(ModifiedSpriteIds)
+			};
 
-			if (ext == ".spr")
+			foreach (var id in affectedIds)
 			{
-				Loader.WriteSprSnapshotTo(path);
+				if (id <= Loader.SpriteCount && id >= 1)
+				{
+					_currentAction.PixelsBefore[id] = Loader.LoadSpritePixels(id);
+				}
 			}
-			else
-			{
-				Loader.WriteAssetsSnapshotTo(path);
-			}
-			return path;
 		}
 
-		private async Task RestoreSnapshot(string snapshotPath)
+		private void EndSpriteTransaction(IEnumerable<uint> affectedIds)
 		{
-			await Task.Run(() =>
-				Loader.OpenArchive(snapshotPath, extendedSpriteIds: UseExtendedSpriteIds, transparentPixels: UseTransparentPixels))
-				.ConfigureAwait(true);
-			TotalSprites = Loader.SpriteCount;
-			UpdatePage();
-			OnPropertyChanged(nameof(IsArchiveLoaded));
-			HasSavedChanges = true;
-		}
+			if (_currentAction == null) return;
 
-		private void PushUndoState()
-		{
-			if (!IsArchiveLoaded)
-				return;
+			_currentAction.SpriteCountAfter = Loader.SpriteCount;
+			_currentAction.HasSavedChangesAfter = HasSavedChanges;
+			_currentAction.AddedAfter.UnionWith(AddedSpriteIds);
+			_currentAction.RemovedAfter.UnionWith(RemovedSpriteIds);
+			_currentAction.ModifiedAfter.UnionWith(ModifiedSpriteIds);
 
-			if (_undoRedoStack == null)
+			foreach (var id in affectedIds)
 			{
-				_undoRedoStack = new Services.Archive.UndoRedoStack<string>(SettingsViewModel.UndoLimit);
+				if (id <= Loader.SpriteCount && id >= 1)
+				{
+					_currentAction.PixelsAfter[id] = Loader.LoadSpritePixels(id);
+				}
 			}
 
-			try
-			{
-				string snapshot = SaveSnapshot();
-				_undoRedoStack.Push(snapshot);
-				RefreshUndoRedoCommands();
-			}
-			catch (Exception ex)
-			{
-				System.Diagnostics.Debug.WriteLine($"Failed to save undo snapshot: {ex.Message}");
-			}
+			_undoRedoStack?.Push(_currentAction);
+			_currentAction = null;
+			RefreshUndoRedoCommands();
 		}
 
 		[RelayCommand(CanExecute = nameof(CanUndo))]
-		private async Task UndoAsync()
+		private void Undo()
 		{
-			if (_undoRedoStack == null || !IsArchiveLoaded)
+			if (_undoRedoStack == null)
 				return;
 
-			string currentSnapshot = SaveSnapshot();
-			string? prevSnapshot = _undoRedoStack.Undo(currentSnapshot);
-			if (prevSnapshot != null)
+			var dummyCurrent = new Services.Archive.SpriteUndoAction();
+			var action = _undoRedoStack.Undo(dummyCurrent);
+			if (action != null)
 			{
-				await RestoreSnapshot(prevSnapshot);
-				try { File.Delete(prevSnapshot); Directory.Delete(Path.GetDirectoryName(prevSnapshot)!, true); } catch {}
-			}
-			else
-			{
-				try { File.Delete(currentSnapshot); Directory.Delete(Path.GetDirectoryName(currentSnapshot)!, true); } catch {}
+				while (Loader.SpriteCount > action.SpriteCountBefore)
+				{
+					Loader.RemoveLastSprite();
+				}
+				while (Loader.SpriteCount < action.SpriteCountBefore)
+				{
+					Loader.AddNewSprite();
+				}
+
+				foreach (var pair in action.PixelsBefore)
+				{
+					Loader.SetSpritePixels(pair.Key, pair.Value);
+				}
+
+				AddedSpriteIds.Clear();
+				foreach (var id in action.AddedBefore) AddedSpriteIds.Add(id);
+
+				RemovedSpriteIds.Clear();
+				foreach (var id in action.RemovedBefore) RemovedSpriteIds.Add(id);
+
+				ModifiedSpriteIds.Clear();
+				foreach (var id in action.ModifiedBefore) ModifiedSpriteIds.Add(id);
+
+				HasSavedChanges = action.HasSavedChangesBefore;
+
+				TotalSprites = Loader.SpriteCount;
+				UpdatePage();
+
+				foreach (var id in action.PixelsBefore.Keys)
+				{
+					PagedSprites.FirstOrDefault(s => s.Id == id)?.InvalidatePreview();
+				}
 			}
 			RefreshUndoRedoCommands();
 		}
 
 		[RelayCommand(CanExecute = nameof(CanRedo))]
-		private async Task RedoAsync()
+		private void Redo()
 		{
-			if (_undoRedoStack == null || !IsArchiveLoaded)
+			if (_undoRedoStack == null)
 				return;
 
-			string currentSnapshot = SaveSnapshot();
-			string? nextSnapshot = _undoRedoStack.Redo(currentSnapshot);
-			if (nextSnapshot != null)
+			var dummyCurrent = new Services.Archive.SpriteUndoAction();
+			var action = _undoRedoStack.Redo(dummyCurrent);
+			if (action != null)
 			{
-				await RestoreSnapshot(nextSnapshot);
-				try { File.Delete(nextSnapshot); Directory.Delete(Path.GetDirectoryName(nextSnapshot)!, true); } catch {}
-			}
-			else
-			{
-				try { File.Delete(currentSnapshot); Directory.Delete(Path.GetDirectoryName(currentSnapshot)!, true); } catch {}
+				while (Loader.SpriteCount > action.SpriteCountAfter)
+				{
+					Loader.RemoveLastSprite();
+				}
+				while (Loader.SpriteCount < action.SpriteCountAfter)
+				{
+					Loader.AddNewSprite();
+				}
+
+				foreach (var pair in action.PixelsAfter)
+				{
+					Loader.SetSpritePixels(pair.Key, pair.Value);
+				}
+
+				AddedSpriteIds.Clear();
+				foreach (var id in action.AddedAfter) AddedSpriteIds.Add(id);
+
+				RemovedSpriteIds.Clear();
+				foreach (var id in action.RemovedAfter) RemovedSpriteIds.Add(id);
+
+				ModifiedSpriteIds.Clear();
+				foreach (var id in action.ModifiedAfter) ModifiedSpriteIds.Add(id);
+
+				HasSavedChanges = action.HasSavedChangesAfter;
+
+				TotalSprites = Loader.SpriteCount;
+				UpdatePage();
+
+				foreach (var id in action.PixelsAfter.Keys)
+				{
+					PagedSprites.FirstOrDefault(s => s.Id == id)?.InvalidatePreview();
+				}
 			}
 			RefreshUndoRedoCommands();
 		}

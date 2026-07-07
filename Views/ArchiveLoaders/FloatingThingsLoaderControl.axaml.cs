@@ -67,6 +67,12 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 			};
 		}
 
+		protected override void OnPointerPressed(PointerPressedEventArgs e)
+		{
+			base.OnPointerPressed(e);
+			Focus();
+		}
+
 		private void OnScrollToItemRequested(object item)
 		{
 			var listBox = _viewModel?.IsGridView == true ? ThingGridListBox : ThingListListBox;

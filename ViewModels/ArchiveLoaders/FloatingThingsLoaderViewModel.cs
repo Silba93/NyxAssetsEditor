@@ -145,7 +145,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useFrameGroups = true;
 		private bool _useSuggestedSettings = true;
 		private string _jumpToIdText = string.Empty;
-		private Services.Archive.UndoRedoStack<string>? _undoRedoStack;
+		private Services.Archive.UndoRedoStack<Services.Archive.ThingUndoAction>? _undoRedoStack;
+		private Services.Archive.ThingUndoAction? _currentAction;
 
 		private ThingKind _selectedSection = ThingKind.Item;
 
@@ -420,7 +421,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			SettingsViewModel.ClientVersionChanged += OnClientVersionChanged;
 			SettingsViewModel.AssetDisplaySizeChanged += OnAssetDisplaySizeChanged;
 			ResetSettingsToDefaults();
-			_undoRedoStack = new Services.Archive.UndoRedoStack<string>(SettingsViewModel.UndoLimit);
+			_undoRedoStack = new Services.Archive.UndoRedoStack<Services.Archive.ThingUndoAction>(SettingsViewModel.UndoLimit);
 		}
 
 		private void OnThingIdOffsetChanged(uint newOffset)
@@ -564,7 +565,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_catalog == null)
 				return;
 
-			PushUndoState();
+			StartThingTransaction(new[] { (thing.Kind, thing.Id) });
 
 			switch (thing.Kind)
 			{
@@ -589,6 +590,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			SyncThingInList(thing, replaceExisting: true);
 			PagedThings.FirstOrDefault(t => t.Id == thing.Id)?.InvalidatePreview();
+
+			EndThingTransaction(new[] { (thing.Kind, thing.Id) });
 		}
 
 		private bool _hasSavedChanges;
@@ -961,7 +964,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_catalog == null)
 				return;
 
-			PushUndoState();
+			var kind = document.Thing.Kind;
+			StartThingTransaction(new[] { (kind, assignId) });
 
 			var loader = GetActiveSpriteLoader();
 			try
@@ -989,10 +993,13 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			catch (Exception ex)
 			{
 				Debug.WriteLine($"[ThingsLoader] Import failed for id {assignId}: {ex.Message}");
+				_currentAction = null;
 				return;
 			}
 
 			RefreshAfterCatalogMutation(goToLastPage: !replaceExisting);
+
+			EndThingTransaction(new[] { (kind, assignId) });
 		}
 
 		public void DuplicateThing(ThingItemViewModel thing) => DuplicateThings(new[] { thing });
@@ -1002,8 +1009,6 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (_catalog == null)
 				return;
 
-			PushUndoState();
-
 			var loader = GetActiveSpriteLoader();
 			if (loader == null)
 			{
@@ -1011,7 +1016,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				return;
 			}
 
-			foreach (var item in things.OrderBy(t => t.Id))
+			var itemsList = things.OrderBy(t => t.Id).ToList();
+			var createdThings = new List<(ThingKind, uint)>();
+			
+			StartThingTransaction(Enumerable.Empty<(ThingKind, uint)>());
+
+			foreach (var item in itemsList)
 			{
 				var source = GetThingType(item.Id);
 				if (source == null)
@@ -1038,6 +1048,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					}
 
 					AddedThingIds.Add(newId);
+					createdThings.Add((source.Kind, newId));
 
 					_allThings.Add(clone);
 					_allThings.Sort((a, b) => a.Id.CompareTo(b.Id));
@@ -1050,6 +1061,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			TotalThings = (uint)_allThings.Count;
 			RefreshAfterCatalogMutation(goToLastPage: true);
+
+			EndThingTransaction(createdThings);
 		}
 
 		public void RemoveThing(ThingItemViewModel thing) => RemoveThings(new[] { thing });
@@ -1058,10 +1071,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		{
 			if (_catalog == null) return;
 
-			PushUndoState();
-
 			var itemsList = things.ToList();
 			if (itemsList.Count == 0) return;
+
+			var kind = SelectedSection;
+			var affected = itemsList.Select(t => (kind, t.Id)).ToList();
+			StartThingTransaction(affected);
 
 			var idsToRemove = new HashSet<uint>(itemsList.Select(t => t.Id));
 
@@ -1073,7 +1088,6 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			// Sort descending to allow sequential deletion from the end
 			var idsDescending = itemsList.Select(t => t.Id).Distinct().OrderByDescending(id => id).ToList();
-			var kind = SelectedSection;
 
 			for (int i = 0; i < idsDescending.Count; i++)
 			{
@@ -1173,6 +1187,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			}
 
 			RefreshAfterCatalogMutation(goToLastPage: false);
+
+			EndThingTransaction(affected);
 		}
 
 		[RelayCommand(CanExecute = nameof(IsArchiveLoaded))]
@@ -1232,11 +1248,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			try
 			{
-				PushUndoState();
-
 				var kind = SelectedSection;
 				var newId = ThingExchangeHelper.GetNextAppendId(_catalog, kind);
-				
+
+				StartThingTransaction(Enumerable.Empty<(ThingKind, uint)>());
+
 				var newThing = new ThingType
 				{
 					Id = newId,
@@ -1290,10 +1306,13 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					ScrollToItemRequested?.Invoke(newItem);
 					_ = OpenThingEditor(newItem);
 				}
+
+				EndThingTransaction(new[] { (kind, newId) });
 			}
 			catch (Exception ex)
 			{
 				Debug.WriteLine($"[ThingsLoader] Failed to create new thing: {ex.Message}");
+				_currentAction = null;
 			}
 		}
 
@@ -1340,96 +1359,127 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			return enteredId;
 		}
 
-		private string SaveSnapshot()
+		private void StartThingTransaction(IEnumerable<(ThingKind Kind, uint Id)> affectedThings)
 		{
-			if (_catalog == null)
-				throw new InvalidOperationException("No catalog is loaded.");
+			if (_catalog == null) return;
 
-			string tempDir = Path.Combine(AppContext.BaseDirectory, "temp_undo", Guid.NewGuid().ToString());
-			Directory.CreateDirectory(tempDir);
-			string ext = FilePath.EndsWith(".things", StringComparison.OrdinalIgnoreCase) ? ".things" : ".dat";
-			string path = Path.Combine(tempDir, "snapshot" + ext);
+			_currentAction = new Services.Archive.ThingUndoAction
+			{
+				ItemCountBefore = _catalog.ItemCount,
+				OutfitCountBefore = _catalog.OutfitCount,
+				EffectCountBefore = _catalog.EffectCount,
+				MissileCountBefore = _catalog.MissileCount,
+				HasSavedChangesBefore = HasSavedChanges,
+				AddedBefore = new HashSet<uint>(AddedThingIds),
+				RemovedBefore = new HashSet<uint>(RemovedThingIds),
+				ModifiedBefore = new HashSet<uint>(ModifiedThingIds)
+			};
 
-			var options = GetWriteOptions();
-			if (ext == ".things")
+			foreach (var item in affectedThings)
 			{
-				_catalog.ExportJson(path, options);
+				var currentThing = GetThingFromCatalog(item.Kind, item.Id);
+				if (currentThing != null)
+				{
+					_currentAction.ThingsBefore[item.Kind][item.Id] = ThingCloner.Clone(currentThing, item.Id);
+				}
 			}
-			else
-			{
-				using var datStream = File.Create(path);
-				_catalog.WriteDatTo(datStream, options);
-			}
-			return path;
 		}
 
-		private async Task RestoreSnapshot(string snapshotPath)
+		private void EndThingTransaction(IEnumerable<(ThingKind Kind, uint Id)> affectedThings)
 		{
-			var options = GetWriteOptions();
-			_catalog = await Task.Run(() => ReadCatalogFromFile(snapshotPath, options)).ConfigureAwait(true);
-			ReloadThingsForSection();
-			OnPropertyChanged(nameof(IsArchiveLoaded));
-			HasSavedChanges = true;
-		}
+			if (_catalog == null || _currentAction == null) return;
 
-		private void PushUndoState()
-		{
-			if (_catalog == null)
-				return;
+			_currentAction.ItemCountAfter = _catalog.ItemCount;
+			_currentAction.OutfitCountAfter = _catalog.OutfitCount;
+			_currentAction.EffectCountAfter = _catalog.EffectCount;
+			_currentAction.MissileCountAfter = _catalog.MissileCount;
+			_currentAction.HasSavedChangesAfter = HasSavedChanges;
+			_currentAction.AddedAfter.UnionWith(AddedThingIds);
+			_currentAction.RemovedAfter.UnionWith(RemovedThingIds);
+			_currentAction.ModifiedAfter.UnionWith(ModifiedThingIds);
 
-			if (_undoRedoStack == null)
+			foreach (var item in affectedThings)
 			{
-				_undoRedoStack = new Services.Archive.UndoRedoStack<string>(SettingsViewModel.UndoLimit);
+				var currentThing = GetThingFromCatalog(item.Kind, item.Id);
+				if (currentThing != null)
+				{
+					_currentAction.ThingsAfter[item.Kind][item.Id] = ThingCloner.Clone(currentThing, item.Id);
+				}
 			}
 
-			try
-			{
-				string snapshot = SaveSnapshot();
-				_undoRedoStack.Push(snapshot);
-				RefreshUndoRedoCommands();
-			}
-			catch (Exception ex)
-			{
-				System.Diagnostics.Debug.WriteLine($"Failed to save undo snapshot: {ex.Message}");
-			}
+			_undoRedoStack?.Push(_currentAction);
+			_currentAction = null;
+			RefreshUndoRedoCommands();
 		}
 
 		[RelayCommand(CanExecute = nameof(CanUndo))]
-		private async Task UndoAsync()
+		private void Undo()
 		{
 			if (_undoRedoStack == null || _catalog == null)
 				return;
 
-			string currentSnapshot = SaveSnapshot();
-			string? prevSnapshot = _undoRedoStack.Undo(currentSnapshot);
-			if (prevSnapshot != null)
+			var dummyCurrent = new Services.Archive.ThingUndoAction();
+			var action = _undoRedoStack.Undo(dummyCurrent);
+			if (action != null)
 			{
-				await RestoreSnapshot(prevSnapshot);
-				try { File.Delete(prevSnapshot); Directory.Delete(Path.GetDirectoryName(prevSnapshot)!, true); } catch {}
-			}
-			else
-			{
-				try { File.Delete(currentSnapshot); Directory.Delete(Path.GetDirectoryName(currentSnapshot)!, true); } catch {}
+				RevertCounts(action.ItemCountBefore, action.OutfitCountBefore, action.EffectCountBefore, action.MissileCountBefore);
+
+				foreach (var kind in new[] { ThingKind.Item, ThingKind.Outfit, ThingKind.Effect, ThingKind.Missile })
+				{
+					foreach (var pair in action.ThingsBefore[kind])
+					{
+						PutThingIntoCatalog(kind, pair.Value);
+					}
+				}
+
+				AddedThingIds.Clear();
+				foreach (var id in action.AddedBefore) AddedThingIds.Add(id);
+
+				RemovedThingIds.Clear();
+				foreach (var id in action.RemovedBefore) RemovedThingIds.Add(id);
+
+				ModifiedThingIds.Clear();
+				foreach (var id in action.ModifiedBefore) ModifiedThingIds.Add(id);
+
+				HasSavedChanges = action.HasSavedChangesBefore;
+
+				ReloadThingsForSection();
 			}
 			RefreshUndoRedoCommands();
 		}
 
 		[RelayCommand(CanExecute = nameof(CanRedo))]
-		private async Task RedoAsync()
+		private void Redo()
 		{
 			if (_undoRedoStack == null || _catalog == null)
 				return;
 
-			string currentSnapshot = SaveSnapshot();
-			string? nextSnapshot = _undoRedoStack.Redo(currentSnapshot);
-			if (nextSnapshot != null)
+			var dummyCurrent = new Services.Archive.ThingUndoAction();
+			var action = _undoRedoStack.Redo(dummyCurrent);
+			if (action != null)
 			{
-				await RestoreSnapshot(nextSnapshot);
-				try { File.Delete(nextSnapshot); Directory.Delete(Path.GetDirectoryName(nextSnapshot)!, true); } catch {}
-			}
-			else
-			{
-				try { File.Delete(currentSnapshot); Directory.Delete(Path.GetDirectoryName(currentSnapshot)!, true); } catch {}
+				RevertCounts(action.ItemCountAfter, action.OutfitCountAfter, action.EffectCountAfter, action.MissileCountAfter);
+
+				foreach (var kind in new[] { ThingKind.Item, ThingKind.Outfit, ThingKind.Effect, ThingKind.Missile })
+				{
+					foreach (var pair in action.ThingsAfter[kind])
+					{
+						PutThingIntoCatalog(kind, pair.Value);
+					}
+				}
+
+				AddedThingIds.Clear();
+				foreach (var id in action.AddedAfter) AddedThingIds.Add(id);
+
+				RemovedThingIds.Clear();
+				foreach (var id in action.RemovedAfter) RemovedThingIds.Add(id);
+
+				ModifiedThingIds.Clear();
+				foreach (var id in action.ModifiedAfter) ModifiedThingIds.Add(id);
+
+				HasSavedChanges = action.HasSavedChangesAfter;
+
+				ReloadThingsForSection();
 			}
 			RefreshUndoRedoCommands();
 		}
@@ -1441,6 +1491,40 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		{
 			UndoCommand.NotifyCanExecuteChanged();
 			RedoCommand.NotifyCanExecuteChanged();
+		}
+
+		private ThingType? GetThingFromCatalog(ThingKind kind, uint id)
+		{
+			if (_catalog == null) return null;
+			try
+			{
+				return ThingExchangeHelper.GetThingFromCatalog(_catalog, kind, id);
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		private void PutThingIntoCatalog(ThingKind kind, ThingType thing)
+		{
+			if (_catalog == null) return;
+			switch (kind)
+			{
+				case ThingKind.Item: _catalog.PutItem(thing); break;
+				case ThingKind.Outfit: _catalog.PutOutfit(thing); break;
+				case ThingKind.Effect: _catalog.PutEffect(thing); break;
+				case ThingKind.Missile: _catalog.PutMissile(thing); break;
+			}
+		}
+
+		private void RevertCounts(uint items, uint outfits, uint effects, uint missiles)
+		{
+			if (_catalog == null) return;
+			while (_catalog.ItemCount > items) _catalog.RemoveItem(_catalog.ItemCount, _catalog.ItemCount == items + 1);
+			while (_catalog.OutfitCount > outfits) _catalog.RemoveOutfit(_catalog.OutfitCount, _catalog.OutfitCount == outfits + 1);
+			while (_catalog.EffectCount > effects) _catalog.RemoveEffect(_catalog.EffectCount, _catalog.EffectCount == effects + 1);
+			while (_catalog.MissileCount > missiles) _catalog.RemoveMissile(_catalog.MissileCount, _catalog.MissileCount == missiles + 1);
 		}
 	}
 }
