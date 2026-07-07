@@ -35,11 +35,20 @@ namespace NyxAssetsEditor.Services.Persistence
 			public string ThingEditorDragGridColor { get; set; } = "#B4FF69B4";
 			public int ThingEditorDragGridLineWidth { get; set; } = 1;
 			public string ThingEditorDragHighlightColor { get; set; } = "#803A7BD5";
+			public int MaxRecentCombinations { get; set; } = 10;
 		}
 
 		public class AppStateTomlModel
 		{
 			public AssetsStateModel Assets { get; set; } = new AssetsStateModel();
+			public List<RecentCombinationModel> RecentCombinations { get; set; } = new List<RecentCombinationModel>();
+		}
+
+		public class RecentCombinationModel
+		{
+			public string SpritePath { get; set; } = "";
+			public string ThingsPath { get; set; } = "";
+			public string LastUsed { get; set; } = "";
 		}
 
 		public class AssetsStateModel
@@ -63,6 +72,7 @@ namespace NyxAssetsEditor.Services.Persistence
 			public bool IsGridView { get; set; } = true;
 			public int PageSize { get; set; } = 100;
 			public int CurrentPage { get; set; } = 1;
+			public bool UseSuggestedSettings { get; set; } = true;
 
 			// Sprite-specific
 			public bool UseTransparentPixels { get; set; } = true;
@@ -101,7 +111,8 @@ namespace NyxAssetsEditor.Services.Persistence
 							model.ThingEditorGridLineWidth,
 							model.ThingEditorDragGridColor,
 							model.ThingEditorDragGridLineWidth,
-							model.ThingEditorDragHighlightColor);
+							model.ThingEditorDragHighlightColor,
+							model.MaxRecentCombinations);
 					}
 				}
 			}
@@ -133,7 +144,8 @@ namespace NyxAssetsEditor.Services.Persistence
 					ThingEditorGridLineWidth = SettingsViewModel.ThingEditorGridLineWidth,
 					ThingEditorDragGridColor = SettingsViewModel.ThingEditorDragGridColor,
 					ThingEditorDragGridLineWidth = SettingsViewModel.ThingEditorDragGridLineWidth,
-					ThingEditorDragHighlightColor = SettingsViewModel.ThingEditorDragHighlightColor
+					ThingEditorDragHighlightColor = SettingsViewModel.ThingEditorDragHighlightColor,
+					MaxRecentCombinations = SettingsViewModel.MaxRecentCombinations
 				};
 				string toml = TomlSerializer.Serialize(model);
 				File.WriteAllText(SettingsPath, toml);
@@ -150,6 +162,23 @@ namespace NyxAssetsEditor.Services.Persistence
 			try
 			{
 				var model = new AppStateTomlModel();
+
+				if (File.Exists(AppStatePath))
+				{
+					try
+					{
+						string existingToml = File.ReadAllText(AppStatePath);
+						var existing = TomlSerializer.Deserialize<AppStateTomlModel>(existingToml);
+						if (existing?.RecentCombinations != null)
+						{
+							model.RecentCombinations = existing.RecentCombinations;
+						}
+					}
+					catch
+					{
+						// Ignore
+					}
+				}
 
 				foreach (var panel in assetsVm.ActivePanels)
 				{
@@ -175,6 +204,7 @@ namespace NyxAssetsEditor.Services.Persistence
 						state.CurrentPage = spritePanel.CurrentPage;
 						state.UseTransparentPixels = spritePanel.UseTransparentPixels;
 						state.UseExtendedSpriteIds = spritePanel.UseExtendedSpriteIds;
+						state.UseSuggestedSettings = spritePanel.UseSuggestedSettings;
 					}
 					else if (panel is FloatingThingsLoaderViewModel thingsPanel)
 					{
@@ -187,6 +217,7 @@ namespace NyxAssetsEditor.Services.Persistence
 						state.UseFrameAnimations = thingsPanel.UseFrameAnimations;
 						state.UseFrameGroups = thingsPanel.UseFrameGroups;
 						state.LinkedSpriteFilePath = thingsPanel.LinkedSpritePanel?.FilePath ?? "";
+						state.UseSuggestedSettings = thingsPanel.UseSuggestedSettings;
 					}
 
 					model.Assets.Panels.Add(state);
@@ -235,7 +266,9 @@ namespace NyxAssetsEditor.Services.Persistence
 							IsGridView = panelState.IsGridView,
 							PageSize = panelState.PageSize,
 							UseTransparentPixels = panelState.UseTransparentPixels,
-							UseExtendedSpriteIds = panelState.UseExtendedSpriteIds
+							UseExtendedSpriteIds = panelState.UseExtendedSpriteIds,
+							IsDefaultPosition = false,
+							UseSuggestedSettings = panelState.UseSuggestedSettings
 						};
 
 						assetsVm.RestorePanel(panel);
@@ -255,7 +288,9 @@ namespace NyxAssetsEditor.Services.Persistence
 							PageSize = panelState.PageSize,
 							UseExtendedThingIds = panelState.UseExtendedThingIds,
 							UseFrameAnimations = panelState.UseFrameAnimations,
-							UseFrameGroups = panelState.UseFrameGroups
+							UseFrameGroups = panelState.UseFrameGroups,
+							IsDefaultPosition = false,
+							UseSuggestedSettings = panelState.UseSuggestedSettings
 						};
 
 						assetsVm.RestorePanel(panel);
@@ -305,6 +340,92 @@ namespace NyxAssetsEditor.Services.Persistence
 			{
 				_isRestoring = false;
 			}
+		}
+
+		public static void AddRecentCombination(string spritePath, string thingsPath)
+		{
+			try
+			{
+				var model = new AppStateTomlModel();
+				if (File.Exists(AppStatePath))
+				{
+					try
+					{
+						string toml = File.ReadAllText(AppStatePath);
+						var existing = TomlSerializer.Deserialize<AppStateTomlModel>(toml);
+						if (existing != null)
+							model = existing;
+					}
+					catch
+					{
+						// Ignore
+					}
+				}
+
+				if (model.RecentCombinations == null)
+					model.RecentCombinations = new List<RecentCombinationModel>();
+
+				// Normalize paths for comparison
+				string normSprite = string.IsNullOrEmpty(spritePath) ? "" : Path.GetFullPath(spritePath);
+				string normThings = string.IsNullOrEmpty(thingsPath) ? "" : Path.GetFullPath(thingsPath);
+
+				// Remove duplicates (case-insensitive comparison)
+				model.RecentCombinations.RemoveAll(rc =>
+				{
+					string s = string.IsNullOrEmpty(rc.SpritePath) ? "" : Path.GetFullPath(rc.SpritePath);
+					string t = string.IsNullOrEmpty(rc.ThingsPath) ? "" : Path.GetFullPath(rc.ThingsPath);
+					return string.Equals(s, normSprite, StringComparison.OrdinalIgnoreCase) &&
+						   string.Equals(t, normThings, StringComparison.OrdinalIgnoreCase);
+				});
+
+				// Insert at beginning
+				model.RecentCombinations.Insert(0, new RecentCombinationModel
+				{
+					SpritePath = spritePath ?? "",
+					ThingsPath = thingsPath ?? "",
+					LastUsed = DateTime.Now.ToString("o")
+				});
+
+				// Keep configured entries count
+				int maxCombinations = SettingsViewModel.MaxRecentCombinations;
+				if (maxCombinations < 4 || maxCombinations > 20)
+				{
+					maxCombinations = 10;
+				}
+
+				if (model.RecentCombinations.Count > maxCombinations)
+				{
+					model.RecentCombinations.RemoveRange(maxCombinations, model.RecentCombinations.Count - maxCombinations);
+				}
+
+				string serialized = TomlSerializer.Serialize(model);
+				File.WriteAllText(AppStatePath, serialized);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Failed to save recent combination: {ex.Message}");
+			}
+		}
+
+		public static List<RecentCombinationModel> GetRecentCombinations()
+		{
+			try
+			{
+				if (File.Exists(AppStatePath))
+				{
+					string toml = File.ReadAllText(AppStatePath);
+					var model = TomlSerializer.Deserialize<AppStateTomlModel>(toml);
+					if (model != null && model.RecentCombinations != null)
+					{
+						return model.RecentCombinations;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Failed to load recent combinations: {ex.Message}");
+			}
+			return new List<RecentCombinationModel>();
 		}
 	}
 }

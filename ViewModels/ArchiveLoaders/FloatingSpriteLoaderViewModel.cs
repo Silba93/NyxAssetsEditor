@@ -24,6 +24,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private int _pageSize = 100;
 		private bool _useTransparentPixels = true;
 		private bool _useExtendedSpriteIds = true;
+		private bool _useSuggestedSettings = true;
 		private bool _showSaveConfirmation;
 		private string _jumpToIdText = string.Empty;
 
@@ -77,6 +78,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			}
 		}
 
+		public bool UseSuggestedSettings
+		{
+			get => _useSuggestedSettings;
+			set => SetProperty(ref _useSuggestedSettings, value);
+		}
+
 		public bool UseExtendedSpriteIds
 		{
 			get => _useExtendedSpriteIds;
@@ -90,7 +97,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		}
 
 
-		public int[] AvailablePageSizes { get; } = { 50, 100, 200, 300 };
+		public int[] AvailablePageSizes { get; } = { 50, 100, 200, 300, 500, 1000 };
 
 		public bool ShowSaveConfirmation
 		{
@@ -114,7 +121,22 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			}
 		}
 
-		public bool IsArchiveLoaded => TotalSprites > 0;
+		public bool IsArchiveLoaded => Loader.ArchiveKind != SpriteArchiveKind.None;
+
+		private string? _errorMessage;
+		public string? ErrorMessage
+		{
+			get => _errorMessage;
+			set
+			{
+				if (SetProperty(ref _errorMessage, value))
+				{
+					OnPropertyChanged(nameof(HasError));
+				}
+			}
+		}
+
+		public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
 		private bool _isGridView = true;
 
@@ -222,6 +244,42 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public async Task LoadArchiveAsync(string path)
 		{
+			ErrorMessage = null;
+
+			if (path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+			{
+				uint signature = 0;
+				try
+				{
+					using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read))
+					using (var br = new System.IO.BinaryReader(fs))
+					{
+						if (fs.Length >= 4)
+							signature = br.ReadUInt32();
+					}
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Failed to read spr signature: {ex.Message}");
+				}
+
+				if (signature != 0)
+				{
+					var versionEntry = ClientVersion.AvailableVersions.Find(v => v.SprSignature == signature);
+					if (versionEntry == null)
+					{
+						ErrorMessage = $"Unsupported version\nSignature: 0x{signature:X8}";
+						OnPropertyChanged(nameof(IsArchiveLoaded));
+						return;
+					}
+					else if (UseSuggestedSettings)
+					{
+						var version = new NyxAssets.Things.ClientDataVersion { Value = versionEntry.Version };
+						UseExtendedSpriteIds = NyxAssets.Things.DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
+					}
+				}
+			}
+
 			AddedSpriteIds.Clear();
 			RemovedSpriteIds.Clear();
 			ModifiedSpriteIds.Clear();
@@ -233,6 +291,42 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			TotalSprites = Loader.SpriteCount;
 			CurrentPage = 1;
 			UpdatePage();
+			OnPropertyChanged(nameof(IsArchiveLoaded));
+			ParentViewModel?.OnSpriteArchiveLoaded(this);
+
+			if (Loader.SpriteCount > 0)
+			{
+				string spritePath = FilePath ?? "";
+				if (spritePath == "No archive loaded") spritePath = "";
+
+				if (!string.IsNullOrEmpty(spritePath))
+				{
+					NyxAssetsEditor.Services.Persistence.PersistenceService.AddRecentCombination(spritePath, "");
+				}
+			}
+		}
+
+		public async Task CreateNewArchiveAsync(string format, uint clientVersion, bool extendedSpriteIds = true, bool transparentPixels = true)
+		{
+			AddedSpriteIds.Clear();
+			RemovedSpriteIds.Clear();
+			ModifiedSpriteIds.Clear();
+
+			UseExtendedSpriteIds = extendedSpriteIds;
+			UseTransparentPixels = transparentPixels;
+
+			FilePath = format.ToLower() == "spr" ? "Untitled.spr" : "Untitled.assets";
+
+			var versionEntry = ClientVersion.AvailableVersions.Find(v => v.Version == clientVersion);
+			uint sprSig = versionEntry?.SprSignature ?? 0U;
+
+			await Task.Run(() => Loader.OpenEmptyArchive(format, sprSig, extendedSpriteIds, transparentPixels)).ConfigureAwait(true);
+
+			TotalSprites = Loader.SpriteCount;
+			CurrentPage = 1;
+			UpdatePage();
+			HasSavedChanges = true;
+			OnPropertyChanged(nameof(IsArchiveLoaded));
 			ParentViewModel?.OnSpriteArchiveLoaded(this);
 		}
 

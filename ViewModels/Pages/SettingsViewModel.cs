@@ -11,6 +11,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		public string Description => "This is the dynamically loaded Settings View. Configure your editor options here.";
 
 		public static int DefaultPageSize { get; private set; } = 100;
+		public static int MaxRecentCombinations { get; private set; } = 10;
 
 		private static bool _useTransparentPixels = true;
 		public static bool UseTransparentPixels
@@ -241,15 +242,18 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			int thingEditorGridLineWidth = 1,
 			string? thingEditorDragGridColor = null,
 			int thingEditorDragGridLineWidth = 1,
-			string? thingEditorDragHighlightColor = null)
+			string? thingEditorDragHighlightColor = null,
+			int maxRecentCombinations = 10)
 		{
 			DefaultPageSize = defaultPageSize;
+			MaxRecentCombinations = maxRecentCombinations;
 			_useTransparentPixels = useTransparentPixels;
 			_useExtendedSpriteIds = useExtendedSpriteIds;
 			_preloadGraphicalAssets = preloadGraphicalAssets;
 			_assetDisplaySize = assetDisplaySize;
 			ThingIdOffset = thingIdOffset;
 			ClientVersion = clientVersion;
+			_selectedVersionIndex = System.Math.Max(0, NyxAssetsEditor.ViewModels.Common.ClientVersion.AvailableVersions.FindIndex(v => v.Version == clientVersion));
 			ItemAnimationDurationMs = itemAnimationDurationMs;
 			OutfitAnimationDurationMs = outfitAnimationDurationMs;
 			EffectAnimationDurationMs = effectAnimationDurationMs;
@@ -280,7 +284,36 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 		}
 
-		private int _selectedVersionIndex = 0; // Index 0 maps to 10.98
+		public System.Collections.Generic.List<NyxAssetsEditor.ViewModels.Common.ClientVersion> AvailableVersions => NyxAssetsEditor.ViewModels.Common.ClientVersion.AvailableVersions;
+
+		public NyxAssetsEditor.ViewModels.Common.ClientVersion SelectedVersion
+		{
+			get
+			{
+				var found = AvailableVersions.Find(v => v.Version == ClientVersion);
+				return found ?? AvailableVersions[0];
+			}
+			set
+			{
+				if (value != null && ClientVersion != value.Version)
+				{
+					ClientVersion = value.Version;
+					OnPropertyChanged(nameof(SelectedVersion));
+
+					int idx = AvailableVersions.IndexOf(value);
+					if (idx >= 0 && _selectedVersionIndex != idx)
+					{
+						_selectedVersionIndex = idx;
+						OnPropertyChanged(nameof(SelectedVersionIndex));
+					}
+
+					ClientVersionChanged?.Invoke(ClientVersion);
+					NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+				}
+			}
+		}
+
+		private static int _selectedVersionIndex = 0;
 
 		public int SelectedVersionIndex
 		{
@@ -292,14 +325,40 @@ namespace NyxAssetsEditor.ViewModels.Pages
 					_selectedVersionIndex = value;
 					OnPropertyChanged(nameof(SelectedVersionIndex));
 
-					ClientVersion = value switch
+					if (value >= 0 && value < AvailableVersions.Count)
 					{
-						0 => 1098,
-						1 => 860,
-						2 => 760,
-						_ => 1098
+						ClientVersion = AvailableVersions[value].Version;
+						OnPropertyChanged(nameof(SelectedVersion));
+						ClientVersionChanged?.Invoke(ClientVersion);
+						NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+					}
+				}
+			}
+		}
+
+		private int _selectedMaxRecentCombinationsIndex = 3; // Index 3 maps to 10
+
+		public int SelectedMaxRecentCombinationsIndex
+		{
+			get => _selectedMaxRecentCombinationsIndex;
+			set
+			{
+				if (_selectedMaxRecentCombinationsIndex != value)
+				{
+					_selectedMaxRecentCombinationsIndex = value;
+					OnPropertyChanged(nameof(SelectedMaxRecentCombinationsIndex));
+
+					int newMax = value switch
+					{
+						0 => 4,
+						1 => 6,
+						2 => 8,
+						3 => 10,
+						4 => 16,
+						5 => 20,
+						_ => 10
 					};
-					ClientVersionChanged?.Invoke(ClientVersion);
+					MaxRecentCombinations = newMax;
 					NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
 				}
 			}
@@ -322,6 +381,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 						0 => 50,
 						1 => 100,
 						2 => 200,
+						3 => 500,
+						4 => 1000,
 						_ => 100
 					};
 					DefaultPageSize = newSize;
@@ -397,6 +458,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				50 => 0,
 				100 => 1,
 				200 => 2,
+				500 => 3,
+				1000 => 4,
 				_ => 1
 			};
 			_selectedVersionIndex = ClientVersion switch
@@ -413,6 +476,16 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				96 => 2,
 				128 => 3,
 				_ => 0
+			};
+			_selectedMaxRecentCombinationsIndex = MaxRecentCombinations switch
+			{
+				4 => 0,
+				6 => 1,
+				8 => 2,
+				10 => 3,
+				16 => 4,
+				20 => 5,
+				_ => 3
 			};
 		}
 	}

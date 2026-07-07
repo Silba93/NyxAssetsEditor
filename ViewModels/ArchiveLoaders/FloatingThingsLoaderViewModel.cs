@@ -142,6 +142,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useExtendedThingIds = true;
 		private bool _useFrameAnimations = true;
 		private bool _useFrameGroups = true;
+		private bool _useSuggestedSettings = true;
 		private string _jumpToIdText = string.Empty;
 
 		private ThingKind _selectedSection = ThingKind.Item;
@@ -254,6 +255,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public FloatingSpriteLoaderViewModel? LinkedSpritePanel { get; set; }
 
+		public bool UseSuggestedSettings
+		{
+			get => _useSuggestedSettings;
+			set => SetProperty(ref _useSuggestedSettings, value);
+		}
+
 		public bool UseExtendedThingIds
 		{
 			get => _useExtendedThingIds;
@@ -294,6 +301,23 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		}
 
 		public bool IsArchiveLoaded => _catalog != null;
+
+		private string? _errorMessage;
+		public string? ErrorMessage
+		{
+			get => _errorMessage;
+			set
+			{
+				if (SetProperty(ref _errorMessage, value))
+				{
+					OnPropertyChanged(nameof(HasError));
+					OnPropertyChanged(nameof(ShowSpritesNotLoadedWarning));
+					OnPropertyChanged(nameof(ShowLoadThingsDropzone));
+				}
+			}
+		}
+
+		public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
 		private bool _isGridView = true;
 
@@ -364,7 +388,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			}
 		}
 
-		public int[] AvailablePageSizes { get; } = { 25, 50, 100, 200 };
+		public int[] AvailablePageSizes { get; } = { 25, 50, 100, 200, 500, 1000 };
 
 		public bool HasThingSelection => GetSelectedThings().Count > 0;
 		public int SelectedThingCount => GetSelectedThings().Count;
@@ -511,15 +535,22 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			GetActiveSpriteLoader() != null
 			|| _parentViewModel?.HasAnyPendingSpriteForThings() == true;
 
+		public bool ShowSpritesNotLoadedWarning => !IsSpriteLoaderLoaded && !HasError;
+		public bool ShowLoadThingsDropzone => IsSpriteLoaderLoaded && !HasError;
+
 		public void NotifySpriteLinkChanged()
 		{
 			OnPropertyChanged(nameof(IsSpriteLoaderLoaded));
+			OnPropertyChanged(nameof(ShowSpritesNotLoadedWarning));
+			OnPropertyChanged(nameof(ShowLoadThingsDropzone));
 			RefreshPreviews();
 		}
 
 		public void RefreshPreviews()
 		{
 			OnPropertyChanged(nameof(IsSpriteLoaderLoaded));
+			OnPropertyChanged(nameof(ShowSpritesNotLoadedWarning));
+			OnPropertyChanged(nameof(ShowLoadThingsDropzone));
 			foreach (var item in PagedThings)
 				item.InvalidatePreview();
 		}
@@ -633,11 +664,83 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			NotifySelectionChanged();
 		}
 
+		public async Task CreateNewArchiveAsync(string format, uint clientVersion, bool useExtendedThingIds, bool useFrameAnimations, bool useFrameGroups)
+		{
+			AddedThingIds.Clear();
+			RemovedThingIds.Clear();
+			ModifiedThingIds.Clear();
+
+			UseExtendedThingIds = useExtendedThingIds;
+			UseFrameAnimations = useFrameAnimations;
+			UseFrameGroups = useFrameGroups;
+
+			FilePath = format.ToLower() == "dat" ? "Untitled.dat" : "Untitled.things";
+
+			var datFormat = clientVersion switch
+			{
+				740 => NyxAssets.Things.DatThingFormat.V2_7_40__7_50,
+				760 => NyxAssets.Things.DatThingFormat.V3_7_55__7_72,
+				860 => NyxAssets.Things.DatThingFormat.V5_8_60__9_86,
+				_ => NyxAssets.Things.DatThingFormat.V6_10_10__10_56
+			};
+
+			var versionEntry = ClientVersion.AvailableVersions.Find(v => v.Version == clientVersion);
+			var catalog = new ThingCatalog();
+			catalog.DatSignature = versionEntry?.DatSignature ?? 0U;
+			catalog.DatFormat = datFormat;
+			_catalog = catalog;
+
+			_selectedSection = ThingKind.Item;
+			NotifySectionProperties();
+			OnPropertyChanged(nameof(IsArchiveLoaded));
+			ReloadThingsForSection();
+			HasSavedChanges = true;
+		}
+
 		public void LoadArchive(string path, bool useLastLoadedSprite = true) =>
 			_ = LoadArchiveAsync(path, useLastLoadedSprite);
 
 		public async Task LoadArchiveAsync(string path, bool useLastLoadedSprite = true)
 		{
+			ErrorMessage = null;
+
+			if (path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+			{
+				uint signature = 0;
+				try
+				{
+					using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read))
+					using (var br = new System.IO.BinaryReader(fs))
+					{
+						if (fs.Length >= 4)
+							signature = br.ReadUInt32();
+					}
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Failed to read dat signature: {ex.Message}");
+				}
+
+				if (signature != 0)
+				{
+					var versionEntry = ClientVersion.AvailableVersions.Find(v => v.DatSignature == signature);
+					if (versionEntry == null)
+					{
+						ErrorMessage = $"Unsupported version\nSignature: 0x{signature:X8}";
+						_catalog = null;
+						OnPropertyChanged(nameof(IsArchiveLoaded));
+						return;
+					}
+					else if (UseSuggestedSettings)
+					{
+						var version = new ClientDataVersion { Value = versionEntry.Version };
+						UseExtendedThingIds = DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
+						UseFrameAnimations = DatThingFormatRules.UsesImprovedAnimationsByDefault(version);
+						UseFrameGroups = DatThingFormatRules.UsesOutfitFrameGroupsByDefault(version);
+					}
+				}
+			}
+
 			AddedThingIds.Clear();
 			RemovedThingIds.Clear();
 			ModifiedThingIds.Clear();
@@ -690,6 +793,19 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				CurrentPage = 1;
 			else
 				UpdatePage();
+
+			if (_catalog != null)
+			{
+				string spritePath = LinkedSpritePanel?.FilePath ?? "";
+				if (spritePath == "No archive loaded") spritePath = "";
+				string thingsPath = FilePath ?? "";
+				if (thingsPath == "No things loaded") thingsPath = "";
+
+				if (!string.IsNullOrEmpty(thingsPath) || !string.IsNullOrEmpty(spritePath))
+				{
+					NyxAssetsEditor.Services.Persistence.PersistenceService.AddRecentCombination(spritePath, thingsPath);
+				}
+			}
 		}
 
 		private static ThingCatalog ReadCatalogFromFile(string path, ClientDataReadOptions options)
