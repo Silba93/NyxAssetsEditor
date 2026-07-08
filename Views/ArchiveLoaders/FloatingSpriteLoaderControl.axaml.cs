@@ -355,9 +355,9 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					AllowMultiple = false,
 					FileTypeFilter = new[]
 					{
+						new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.spr", "*.assets" } },
 						new FilePickerFileType("Nyx Sprite Archive") { Patterns = new[] { "*.spr" } },
-						new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } },
-						new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.spr", "*.assets" } }
+						new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } }
 					}
 				});
 
@@ -514,9 +514,9 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 						SuggestedFileName = System.IO.Path.GetFileName(vm.FilePath),
 						FileTypeChoices = new[]
 						{
+							new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.spr", "*.assets" } },
 							new FilePickerFileType("Nyx Sprite Archive") { Patterns = new[] { "*.spr" } },
-							new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } },
-							new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.spr", "*.assets" } }
+							new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } }
 						}
 					});
 

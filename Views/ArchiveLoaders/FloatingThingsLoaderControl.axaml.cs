@@ -317,9 +317,9 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					AllowMultiple = false,
 					FileTypeFilter = new[]
 					{
+						new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.dat", "*.json" } },
 						new FilePickerFileType("Nyx Dat Archive") { Patterns = new[] { "*.dat" } },
-						new FilePickerFileType("Nyx Things Archive") { Patterns = new[] { "*.things" } },
-						new FilePickerFileType("All Supported Archives") { Patterns = new[] { "*.dat", "*.things" } }
+						new FilePickerFileType("Nyx Things JSON") { Patterns = new[] { "*.json" } }
 					}
 				});
 

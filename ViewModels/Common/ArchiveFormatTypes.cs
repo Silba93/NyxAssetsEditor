@@ -24,7 +24,7 @@ namespace NyxAssetsEditor.ViewModels.Common
 				".spr" => ArchiveFormat.Spr,
 				".assets" => ArchiveFormat.Assets,
 				".dat" => ArchiveFormat.Dat,
-				".things" => ArchiveFormat.Things,
+				".json" => ArchiveFormat.Things,
 				_ => ArchiveFormat.Unknown
 			};
 		}

@@ -63,7 +63,7 @@ namespace NyxAssetsEditor.Views.Pages
 				var thingsFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
 				{
 					Title = "Compile Things Archive As",
-					DefaultExtension = thingsFormat == ArchiveFormat.Dat ? ".dat" : ".things",
+					DefaultExtension = thingsFormat == ArchiveFormat.Dat ? ".dat" : ".json",
 					SuggestedFileName = pair.ThingsPanel.FileName,
 					FileTypeChoices = thingsFormat == ArchiveFormat.Dat
 						? new[]
@@ -72,7 +72,7 @@ namespace NyxAssetsEditor.Views.Pages
 						}
 						: new[]
 						{
-							new FilePickerFileType("Nyx Things Archive") { Patterns = new[] { "*.things" } }
+							new FilePickerFileType("Nyx Things JSON") { Patterns = new[] { "*.json" } }
 						}
 				});
 
