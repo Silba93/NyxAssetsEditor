@@ -271,13 +271,21 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		public bool UseSuggestedSettings
 		{
 			get => _useSuggestedSettings;
-			set => SetProperty(ref _useSuggestedSettings, value);
+			set
+			{
+				if (SetProperty(ref _useSuggestedSettings, value) && value && PreferOtfiSettings)
+					PreferOtfiSettings = false;
+			}
 		}
 
 		public bool PreferOtfiSettings
 		{
 			get => _preferOtfiSettings;
-			set => SetProperty(ref _preferOtfiSettings, value);
+			set
+			{
+				if (SetProperty(ref _preferOtfiSettings, value) && value && UseSuggestedSettings)
+					UseSuggestedSettings = false;
+			}
 		}
 
 		public bool UseExtendedThingIds
