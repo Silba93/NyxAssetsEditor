@@ -26,6 +26,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useTransparentPixels = true;
 		private bool _useExtendedSpriteIds = true;
 		private bool _useSuggestedSettings = true;
+		private bool _preferOtfiSettings;
 		private bool _showSaveConfirmation;
 		private string _jumpToIdText = string.Empty;
 		private Services.Archive.UndoRedoStack<Services.Archive.SpriteUndoAction>? _undoRedoStack;
@@ -85,6 +86,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		{
 			get => _useSuggestedSettings;
 			set => SetProperty(ref _useSuggestedSettings, value);
+		}
+
+		public bool PreferOtfiSettings
+		{
+			get => _preferOtfiSettings;
+			set => SetProperty(ref _preferOtfiSettings, value);
 		}
 
 		public bool UseExtendedSpriteIds
@@ -260,6 +267,19 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			ErrorMessage = null;
 
+			if (PreferOtfiSettings && path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
+			{
+				var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
+				if (otfi?.Extended is bool extended) UseExtendedSpriteIds = extended;
+				if (otfi?.Transparency is bool transparency) UseTransparentPixels = transparency;
+				var missing = new List<string>();
+				if (otfi != null && otfi.Extended == null) missing.Add("extended");
+				if (otfi != null && otfi.Transparency == null) missing.Add("transparency");
+				if (missing.Count > 0)
+					warning = $"{warning}{(warning == null ? "" : " ")}{Path.GetFileName(path)}'s OTFI settings are missing {string.Join(", ", missing)}; using the selected checkboxes for those values.";
+				ErrorMessage = warning;
+			}
+
 			if (path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
 			{
 				uint signature = 0;
@@ -286,7 +306,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 						OnPropertyChanged(nameof(IsArchiveLoaded));
 						return;
 					}
-					else if (UseSuggestedSettings)
+					else if (UseSuggestedSettings && !PreferOtfiSettings)
 					{
 						var version = new NyxAssets.Things.ClientDataVersion { Value = versionEntry.Version };
 						UseExtendedSpriteIds = NyxAssets.Things.DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);

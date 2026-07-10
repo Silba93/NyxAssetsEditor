@@ -153,6 +153,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useFrameAnimations = true;
 		private bool _useFrameGroups = true;
 		private bool _useSuggestedSettings = true;
+		private bool _preferOtfiSettings;
 		private string _jumpToIdText = string.Empty;
 		private Services.Archive.UndoRedoStack<Services.Archive.ThingUndoAction>? _undoRedoStack;
 		private Services.Archive.ThingUndoAction? _currentAction;
@@ -271,6 +272,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		{
 			get => _useSuggestedSettings;
 			set => SetProperty(ref _useSuggestedSettings, value);
+		}
+
+		public bool PreferOtfiSettings
+		{
+			get => _preferOtfiSettings;
+			set => SetProperty(ref _preferOtfiSettings, value);
 		}
 
 		public bool UseExtendedThingIds
@@ -442,7 +449,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		private void OnClientVersionChanged(uint newVersion)
 		{
-			if (UseSuggestedSettings)
+			if (UseSuggestedSettings && !PreferOtfiSettings)
 				ResetSettingsToDefaults();
 		}
 
@@ -758,6 +765,21 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			RefreshUndoRedoCommands();
 
 			ErrorMessage = null;
+
+			if (PreferOtfiSettings && path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+			{
+				var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
+				if (otfi?.Extended is bool extended) UseExtendedThingIds = extended;
+				if (otfi?.FrameDurations is bool durations) UseFrameAnimations = durations;
+				if (otfi?.FrameGroups is bool groups) UseFrameGroups = groups;
+				var missing = new List<string>();
+				if (otfi != null && otfi.Extended == null) missing.Add("extended");
+				if (otfi != null && otfi.FrameDurations == null) missing.Add("frame-durations");
+				if (otfi != null && otfi.FrameGroups == null) missing.Add("frame-groups");
+				if (missing.Count > 0)
+					warning = $"{warning}{(warning == null ? "" : " ")}The OTFI settings are missing {string.Join(", ", missing)}; using the selected checkboxes for those values.";
+				ErrorMessage = warning;
+			}
 
 			if (path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
 			{
