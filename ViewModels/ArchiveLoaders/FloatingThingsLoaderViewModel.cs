@@ -756,7 +756,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					UseSuggestedSettings = true;
 					ResetSettingsToDefaults();
 					var reason = warning ?? $"The OTFI file is missing {string.Join(", ", missing)}.";
-					ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to client-version inference.";
+					ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to recommended settings.";
 				}
 				else
 				{
