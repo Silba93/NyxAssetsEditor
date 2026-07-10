@@ -103,12 +103,14 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				if (SetProperty(ref _preferOtfiSettings, value))
 				{
 					OnPropertyChanged(nameof(CanEditManualSettings));
+					OnPropertyChanged(nameof(CanEditTransparency));
 					if (value && UseSuggestedSettings) UseSuggestedSettings = false;
 				}
 			}
 		}
 
 		public bool CanEditManualSettings => !UseSuggestedSettings && !PreferOtfiSettings;
+		public bool CanEditTransparency => !PreferOtfiSettings;
 
 		public bool UseExtendedSpriteIds
 		{
@@ -294,7 +296,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					PreferOtfiSettings = false;
 					UseSuggestedSettings = true;
 					var reason = warning ?? $"The OTFI file is missing {string.Join(", ", missing)}.";
-					ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to client-version inference.";
+					ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to recommended settings.";
 				}
 				else
 				{
