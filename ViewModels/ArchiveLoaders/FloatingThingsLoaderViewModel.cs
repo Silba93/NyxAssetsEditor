@@ -799,9 +799,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				}
 				else
 				{
-					UseExtendedThingIds = otfi.Extended.Value;
-					UseFrameAnimations = otfi.FrameDurations.Value;
-					UseFrameGroups = otfi.FrameGroups.Value;
+					UseExtendedThingIds = otfi.Extended.GetValueOrDefault();
+					UseFrameAnimations = otfi.FrameDurations.GetValueOrDefault();
+					UseFrameGroups = otfi.FrameGroups.GetValueOrDefault();
 				}
 			}
 

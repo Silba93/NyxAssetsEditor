@@ -300,8 +300,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				}
 				else
 				{
-					UseExtendedSpriteIds = otfi.Extended.Value;
-					UseTransparentPixels = otfi.Transparency.Value;
+					UseExtendedSpriteIds = otfi.Extended.GetValueOrDefault();
+					UseTransparentPixels = otfi.Transparency.GetValueOrDefault();
 				}
 			}
 
