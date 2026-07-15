@@ -30,6 +30,8 @@ public partial class FloatingThingEditorControl : UserControl
 		DataContextChanged += OnDataContextChanged;
 		Loaded += OnLoaded;
 
+		AppearanceDropTarget.KeyDown += OnAppearanceKeyDown;
+
 		var titleBar = this.FindControl<Border>("TitleBar");
 		if (titleBar == null)
 			return;
@@ -60,6 +62,31 @@ public partial class FloatingThingEditorControl : UserControl
 		}
 	}
 
+	protected override void OnPointerPressed(PointerPressedEventArgs e)
+	{
+		base.OnPointerPressed(e);
+
+		if (DataContext is FloatingThingEditorViewModel vm)
+		{
+			var visual = e.Source as Visual;
+			bool clickedInsideTarget = false;
+			while (visual != null)
+			{
+				if (visual == AppearanceDropTarget)
+				{
+					clickedInsideTarget = true;
+					break;
+				}
+				visual = visual.GetVisualParent();
+			}
+
+			if (!clickedInsideTarget)
+			{
+				vm.SelectedSlot = null;
+			}
+		}
+	}
+
 	private void OnAppearanceDragEnter(object? sender, DragEventArgs e)
 	{
 		if (!SpriteDragContext.CanAccept(e))
@@ -73,6 +100,19 @@ public partial class FloatingThingEditorControl : UserControl
 
 		if (DataContext is FloatingThingEditorViewModel vm)
 		{
+			if (vm.SourcePanel.LinkedSpritePanel == null)
+			{
+				if (SpriteDragContext.TryRead(e, out var sourcePanel, out _) && sourcePanel != null)
+				{
+					if (NyxAssetsEditor.ViewModels.Common.ArchiveFormatHelper.AreCompatible(sourcePanel.ArchiveFormat, vm.SourcePanel.ArchiveFormat))
+					{
+						vm.SourcePanel.LinkedSpritePanel = sourcePanel;
+						vm.SourcePanel.NotifySpriteLinkChanged();
+						vm.RefreshAppearance();
+					}
+				}
+			}
+
 			var pos = e.GetPosition(AppearanceImageControl);
 			vm.UpdateAppearanceDragHover(pos.X, pos.Y);
 		}
@@ -93,6 +133,19 @@ public partial class FloatingThingEditorControl : UserControl
 		if (!canAccept || DataContext is not FloatingThingEditorViewModel vm)
 			return;
 
+		if (vm.SourcePanel.LinkedSpritePanel == null)
+		{
+			if (SpriteDragContext.TryRead(e, out var sourcePanel, out _) && sourcePanel != null)
+			{
+				if (NyxAssetsEditor.ViewModels.Common.ArchiveFormatHelper.AreCompatible(sourcePanel.ArchiveFormat, vm.SourcePanel.ArchiveFormat))
+				{
+					vm.SourcePanel.LinkedSpritePanel = sourcePanel;
+					vm.SourcePanel.NotifySpriteLinkChanged();
+					vm.RefreshAppearance();
+				}
+			}
+		}
+
 		var pos = e.GetPosition(AppearanceImageControl);
 		vm.UpdateAppearanceDragHover(pos.X, pos.Y);
 	}
@@ -104,16 +157,118 @@ public partial class FloatingThingEditorControl : UserControl
 		if (DataContext is not FloatingThingEditorViewModel vm)
 			return;
 
+		Focus();
+
 		if (!SpriteDragContext.TryRead(e, out var sourcePanel, out var spriteId) || sourcePanel == null)
 		{
 			vm.ClearAppearanceDragHover();
 			return;
 		}
 
+		if (vm.SourcePanel.LinkedSpritePanel == null)
+		{
+			if (NyxAssetsEditor.ViewModels.Common.ArchiveFormatHelper.AreCompatible(sourcePanel.ArchiveFormat, vm.SourcePanel.ArchiveFormat))
+			{
+				vm.SourcePanel.LinkedSpritePanel = sourcePanel;
+				vm.SourcePanel.NotifySpriteLinkChanged();
+				vm.RefreshAppearance();
+			}
+		}
+
 		var pos = e.GetPosition(AppearanceImageControl);
 		vm.HandleSpriteDrop(sourcePanel, spriteId, pos.X, pos.Y);
 		e.DragEffects = DragDropEffects.Copy;
 		e.Handled = true;
+	}
+
+	private void OnAppearancePointerMoved(object? sender, PointerEventArgs e)
+	{
+		if (DataContext is not FloatingThingEditorViewModel vm)
+			return;
+
+		var pos = e.GetPosition(AppearanceImageControl);
+		vm.LastMouseX = pos.X;
+		vm.LastMouseY = pos.Y;
+
+		var slot = NyxAssetsEditor.Services.Rendering.ThingAppearanceDropTarget.Resolve(vm, pos.X, pos.Y, vm.AppearancePixelWidth, vm.AppearancePixelHeight);
+		if (slot == null)
+		{
+			ToolTip.SetTip(AppearanceImageControl, null);
+			return;
+		}
+
+		var spriteId = vm.GetSpriteIdAtSlot(slot.Value);
+		ToolTip.SetTip(AppearanceImageControl, $"Sprite ID: {spriteId}");
+	}
+
+	private void OnAppearancePointerExited(object? sender, PointerEventArgs e)
+	{
+		ToolTip.SetTip(AppearanceImageControl, null);
+	}
+
+	private void OnAppearancePointerPressed(object? sender, PointerPressedEventArgs e)
+	{
+		if (DataContext is not FloatingThingEditorViewModel vm)
+			return;
+
+		// Focus the parent drop target to capture keyboard events
+		AppearanceDropTarget.Focus();
+
+		var pos = e.GetPosition(AppearanceImageControl);
+		var slot = NyxAssetsEditor.Services.Rendering.ThingAppearanceDropTarget.Resolve(vm, pos.X, pos.Y, vm.AppearancePixelWidth, vm.AppearancePixelHeight);
+
+		if (e.ClickCount == 2)
+		{
+			if (slot != null)
+			{
+				var spriteId = vm.GetSpriteIdAtSlot(slot.Value);
+				if (spriteId > 0)
+				{
+					vm.NavigateToSprite(spriteId);
+				}
+			}
+		}
+		else
+		{
+			var pointerPoint = e.GetCurrentPoint(AppearanceImageControl);
+			if (pointerPoint.Properties.IsLeftButtonPressed || pointerPoint.Properties.IsRightButtonPressed)
+			{
+				vm.SelectedSlot = slot;
+			}
+		}
+	}
+
+	private void OnAppearanceKeyDown(object? sender, KeyEventArgs e)
+	{
+		if (DataContext is not FloatingThingEditorViewModel vm)
+			return;
+
+		if (vm.SelectedSlot == null)
+			return;
+
+		var slot = vm.SelectedSlot.Value;
+
+		if (e.KeyModifiers == KeyModifiers.Control)
+		{
+			if (e.Key == Key.C)
+			{
+				vm.CopySlot(slot);
+				e.Handled = true;
+			}
+			else if (e.Key == Key.V)
+			{
+				if (vm.CanPasteSpriteId)
+				{
+					vm.PasteSlot(slot);
+					e.Handled = true;
+				}
+			}
+		}
+		else if (e.Key == Key.Delete || e.Key == Key.Back)
+		{
+			vm.ClearSlot(slot);
+			e.Handled = true;
+		}
 	}
 
 	private void ResetAppearanceDropBorder()
