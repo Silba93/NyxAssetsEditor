@@ -4,7 +4,12 @@
 			 xmlns:local="using:NyxAssetsEditor.Views.ArchiveLoaders"
 			 x:Class="NyxAssetsEditor.Views.ArchiveLoaders.FloatingThingEditorControl"
 			 x:DataType="vm:FloatingThingEditorViewModel"
-			 Width="{Binding DisplayWidth}">
+			 Width="{Binding DisplayWidth}"
+			 Focusable="True">
+
+	<UserControl.KeyBindings>
+		<KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}"/>
+	</UserControl.KeyBindings>
 
 	<UserControl.Resources>
 		<ControlTheme x:Key="{x:Type local:BatchApplyField}" TargetType="local:BatchApplyField">
@@ -147,10 +152,23 @@
 												DragDrop.DragLeave="OnAppearanceDragLeave"
 												DragDrop.DragOver="OnAppearanceDragOver"
 												DragDrop.Drop="OnAppearanceDrop"
+												Focusable="True"
 												Background="#141414" BorderBrush="#444444" BorderThickness="1" CornerRadius="4" Padding="8"
 												HorizontalAlignment="Center" VerticalAlignment="Top" MinWidth="80" MinHeight="80">
+											<Border.ContextMenu>
+												<ContextMenu>
+													<MenuItem Header="Set Sprite ID..." Command="{Binding OpenSetSpriteIdPromptCommand}"/>
+													<MenuItem Header="Clear" Command="{Binding ClearSelectedSlotCommand}"/>
+													<Separator/>
+													<MenuItem Header="Copy Sprite ID" Command="{Binding CopySelectedSlotCommand}" InputGesture="Ctrl+C"/>
+													<MenuItem Header="Paste Sprite ID" Command="{Binding PasteSelectedSlotCommand}" InputGesture="Ctrl+V" IsEnabled="{Binding CanPasteSpriteId}"/>
+												</ContextMenu>
+											</Border.ContextMenu>
 											<Image x:Name="AppearanceImageControl" Source="{Binding AppearanceImage, Mode=OneWay}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
-												   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+												   HorizontalAlignment="Center" VerticalAlignment="Center"
+												   PointerMoved="OnAppearancePointerMoved"
+												   PointerExited="OnAppearancePointerExited"
+												   PointerPressed="OnAppearancePointerPressed"/>
 										</Border>
 									</ScrollViewer>
 
@@ -534,19 +552,25 @@
 				</TabItem>
 			</TabControl>
 			<!-- Resize handles -->
-			<Border Grid.RowSpan="3" Name="ResizeLeft" Width="5" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWestEast"
+			<Border Grid.RowSpan="3" Name="ResizeLeft" Width="5" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWestEast" ZIndex="100"
 					IsVisible="{Binding ShowEditorResizeHandles}"/>
-			<Border Grid.RowSpan="3" Name="ResizeRight" Width="5" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWestEast"
+			<Border Grid.RowSpan="3" Name="ResizeRight" Width="5" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWestEast" ZIndex="100"
 					IsVisible="{Binding ShowEditorResizeHandles}"/>
-			<Border Grid.Row="2" Name="ResizeBottom" Height="5" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNorthSouth"
+			<Border Grid.RowSpan="3" Name="ResizeBottom" Height="5" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNorthSouth" ZIndex="100"
 					IsVisible="{Binding ShowEditorResizeHandles}"/>
-			<Border Grid.Row="2" Name="ResizeCorner" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner"
+			<Border Grid.RowSpan="3" Name="ResizeCorner" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" ZIndex="100"
 					IsVisible="{Binding ShowEditorResizeHandles}"/>
-			<Border Grid.Row="2" Name="ResizeBottomLeft" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner"
+			<Border Grid.RowSpan="3" Name="ResizeBottomLeft" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" ZIndex="100"
+					IsVisible="{Binding ShowEditorResizeHandles}"/>
+			<Border Grid.RowSpan="3" Name="ResizeTop" Height="5" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNorthSouth" ZIndex="100"
+					IsVisible="{Binding ShowEditorResizeHandles}"/>
+			<Border Grid.RowSpan="3" Name="ResizeTopLeft" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" ZIndex="100"
+					IsVisible="{Binding ShowEditorResizeHandles}"/>
+			<Border Grid.RowSpan="3" Name="ResizeTopRight" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" ZIndex="100"
 					IsVisible="{Binding ShowEditorResizeHandles}"/>
 
 			<!-- Footer with Save & Cancel Buttons -->
-			<Border Grid.Row="2" Background="#2D2D2D" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0" Height="44" Padding="12,0" IsVisible="{Binding !IsMinimized}">
+			<Border Grid.Row="2" Name="BottomBar" Background="#2D2D2D" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0" Height="44" Padding="12,0" IsVisible="{Binding !IsMinimized}">
 				<Grid ColumnDefinitions="*, Auto, Auto">
 					<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 						<Button Content="Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding CanCancel}" Width="80" Height="26" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="11" Background="#3D3D3D" Foreground="#E0E0E0"/>
@@ -578,6 +602,19 @@
 							<Button Grid.Column="0" Content="Save" Command="{Binding PromptSaveCommand}" Background="#3A7BD5" Foreground="White" Margin="0,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11" Padding="0,6"/>
 							<Button Grid.Column="1" Content="Don't Save" Command="{Binding PromptDontSaveCommand}" Margin="4,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11" Padding="0,6"/>
 							<Button Grid.Column="2" Content="Cancel" Command="{Binding PromptCancelCommand}" Margin="4,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11" Padding="0,6"/>
+						</Grid>
+					</StackPanel>
+				</Border>
+			</Border>
+			<!-- Set Sprite ID Prompt Overlay -->
+			<Border Grid.RowSpan="3" Background="#B0000000" IsVisible="{Binding ShowSetSpriteIdPrompt}" CornerRadius="8">
+				<Border Background="#2A2A2A" BorderBrush="#444444" BorderThickness="1" CornerRadius="8" Padding="16" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 4 12 0 #7F000000">
+					<StackPanel Spacing="12">
+						<TextBlock Text="Set Sprite ID" FontWeight="Bold" Foreground="#FFFFFF" HorizontalAlignment="Center" FontSize="13"/>
+						<TextBox Text="{Binding TargetSpriteIdText}" PlaceholderText="Enter Sprite ID..." FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+						<Grid ColumnDefinitions="*, *" Margin="0,8,0,0">
+							<Button Grid.Column="0" Content="Cancel" Command="{Binding CancelSetSpriteIdCommand}" Margin="0,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11" Padding="0,6"/>
+							<Button Grid.Column="1" Content="OK" Command="{Binding ConfirmSetSpriteIdCommand}" Background="#3A7BD5" Foreground="White" Margin="4,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11" Padding="0,6"/>
 						</Grid>
 					</StackPanel>
 				</Border>
