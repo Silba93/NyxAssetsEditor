@@ -67,6 +67,19 @@ namespace NyxAssetsEditor.Services.Persistence
 			public string SpritePath { get; set; } = "";
 			public string ThingsPath { get; set; } = "";
 			public string LastUsed { get; set; } = "";
+
+			// Sprite settings
+			public bool SpriteGuessSettingsFromSignature { get; set; } = true;
+			public bool SpritePreferOtfiSettings { get; set; }
+			public bool SpriteUseTransparentPixels { get; set; } = true;
+			public bool SpriteUseExtendedSpriteIds { get; set; } = true;
+
+			// Things settings
+			public bool ThingsGuessSettingsFromSignature { get; set; } = true;
+			public bool ThingsPreferOtfiSettings { get; set; }
+			public bool ThingsUseExtendedThingIds { get; set; } = true;
+			public bool ThingsUseFrameAnimations { get; set; } = true;
+			public bool ThingsUseFrameGroups { get; set; } = true;
 		}
 
 		public class AssetsStateModel
@@ -369,7 +382,18 @@ namespace NyxAssetsEditor.Services.Persistence
 			}
 		}
 
-		public static void AddRecentCombination(string spritePath, string thingsPath)
+		public static void AddRecentCombination(
+			string spritePath,
+			string thingsPath,
+			bool spriteGuess = true,
+			bool spritePreferOtfi = false,
+			bool spriteTransparent = true,
+			bool spriteExtended = true,
+			bool thingsGuess = true,
+			bool thingsPreferOtfi = false,
+			bool thingsExtended = true,
+			bool thingsAnimations = true,
+			bool thingsGroups = true)
 		{
 			try
 			{
@@ -410,7 +434,16 @@ namespace NyxAssetsEditor.Services.Persistence
 				{
 					SpritePath = spritePath ?? "",
 					ThingsPath = thingsPath ?? "",
-					LastUsed = DateTime.Now.ToString("o")
+					LastUsed = DateTime.Now.ToString("o"),
+					SpriteGuessSettingsFromSignature = spriteGuess,
+					SpritePreferOtfiSettings = spritePreferOtfi,
+					SpriteUseTransparentPixels = spriteTransparent,
+					SpriteUseExtendedSpriteIds = spriteExtended,
+					ThingsGuessSettingsFromSignature = thingsGuess,
+					ThingsPreferOtfiSettings = thingsPreferOtfi,
+					ThingsUseExtendedThingIds = thingsExtended,
+					ThingsUseFrameAnimations = thingsAnimations,
+					ThingsUseFrameGroups = thingsGroups
 				});
 
 				// Keep configured entries count
@@ -431,6 +464,38 @@ namespace NyxAssetsEditor.Services.Persistence
 			catch (Exception ex)
 			{
 				Debug.WriteLine($"Failed to save recent combination: {ex.Message}");
+			}
+		}
+
+		public static void RemoveRecentCombination(string spritePath, string thingsPath)
+		{
+			try
+			{
+				if (!File.Exists(AppStatePath))
+					return;
+
+				string toml = File.ReadAllText(AppStatePath);
+				var model = TomlSerializer.Deserialize<AppStateTomlModel>(toml);
+				if (model?.RecentCombinations == null)
+					return;
+
+				string normSprite = string.IsNullOrEmpty(spritePath) ? "" : Path.GetFullPath(spritePath);
+				string normThings = string.IsNullOrEmpty(thingsPath) ? "" : Path.GetFullPath(thingsPath);
+
+				model.RecentCombinations.RemoveAll(rc =>
+				{
+					string s = string.IsNullOrEmpty(rc.SpritePath) ? "" : Path.GetFullPath(rc.SpritePath);
+					string t = string.IsNullOrEmpty(rc.ThingsPath) ? "" : Path.GetFullPath(rc.ThingsPath);
+					return string.Equals(s, normSprite, StringComparison.OrdinalIgnoreCase) &&
+						   string.Equals(t, normThings, StringComparison.OrdinalIgnoreCase);
+				});
+
+				string serialized = TomlSerializer.Serialize(model);
+				File.WriteAllText(AppStatePath, serialized);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Failed to remove recent combination: {ex.Message}");
 			}
 		}
 
