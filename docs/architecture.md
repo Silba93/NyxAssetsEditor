@@ -90,6 +90,8 @@ kind-specific editor fields only appear on relevant tabs. All
 active fields must match. Clipboard copies use the configured displayed item offset; archive
 integrations continue to use raw catalog IDs. Pattern criteria target the selected frame-group
 index, while custom-flag filters are populated from extra properties discovered in the selected kind.
+Results are paged using the same selectable page sizes as Things Viewer and can be displayed as either
+preview tiles or a virtualized list without changing the active filters or result set.
 
 Result context menus always provide **Copy ID**. When a Looktype Generator is open, compatible
 results can also be assigned as its outfit, mount, or corpse. Assigning from another archive pair asks

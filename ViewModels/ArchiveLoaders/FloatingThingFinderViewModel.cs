@@ -183,7 +183,6 @@ public sealed class ThingFinderResultViewModel : IDisposable
 
 public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposable
 {
-	private const int ResultsPerPage = 100;
 	private readonly AssetsViewModel _parent;
 	private readonly DispatcherTimer _filterTimer = new() { Interval = TimeSpan.FromMilliseconds(175) };
 	private readonly List<ThingType> _filteredThings = new();
@@ -192,6 +191,8 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private ThingKind _selectedKind;
 	private int _frameGroupIndex;
 	private int _currentPage = 1;
+	private int _pageSize = 100;
+	private bool _isGridView = true;
 	private ThingFinderContextAction? _pendingContextAction;
 	private bool _showConfirmation;
 	private string _confirmationTitle = string.Empty;
@@ -249,8 +250,40 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		}
 	}
 
+	public int PageSize
+	{
+		get => _pageSize;
+		set
+		{
+			if (!SetProperty(ref _pageSize, Math.Max(1, value))) return;
+			_currentPage = 1;
+			OnPropertyChanged(nameof(CurrentPage));
+			OnPropertyChanged(nameof(TotalPages));
+			UpdatePage();
+			NotifyPagination();
+		}
+	}
+
+	public int[] AvailablePageSizes { get; } = { 25, 50, 100, 200, 500, 1000 };
+
+	public bool IsGridView
+	{
+		get => _isGridView;
+		set
+		{
+			if (!SetProperty(ref _isGridView, value)) return;
+			OnPropertyChanged(nameof(IsListView));
+			OnPropertyChanged(nameof(ShowGridViewContent));
+			OnPropertyChanged(nameof(ShowListViewContent));
+		}
+	}
+
+	public bool IsListView => !IsGridView;
+	public bool ShowGridViewContent => HasResults && IsGridView;
+	public bool ShowListViewContent => HasResults && IsListView;
+
 	public int ResultCount => _filteredThings.Count;
-	public int TotalPages => Math.Max(1, (ResultCount + ResultsPerPage - 1) / ResultsPerPage);
+	public int TotalPages => Math.Max(1, (ResultCount + PageSize - 1) / PageSize);
 	public bool HasPreviousPage => CurrentPage > 1;
 	public bool HasNextPage => CurrentPage < TotalPages;
 	public bool HasResults => ResultCount > 0;
@@ -332,6 +365,9 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	{
 		if (HasNextPage) CurrentPage++;
 	}
+
+	[RelayCommand]
+	private void ToggleViewMode() => IsGridView = !IsGridView;
 
 	[RelayCommand]
 	private async Task ConfirmContextAction()
@@ -598,6 +634,8 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		OnPropertyChanged(nameof(TotalPages));
 		OnPropertyChanged(nameof(HasResults));
 		OnPropertyChanged(nameof(HasNoResults));
+		OnPropertyChanged(nameof(ShowGridViewContent));
+		OnPropertyChanged(nameof(ShowListViewContent));
 		UpdatePage(criteria);
 		NotifyPagination();
 	}
@@ -606,8 +644,8 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	{
 		criteria ??= GetCriteria();
 		DisposeResults();
-		var start = (CurrentPage - 1) * ResultsPerPage;
-		foreach (var thing in _filteredThings.Skip(start).Take(ResultsPerPage))
+		var start = (CurrentPage - 1) * PageSize;
+		foreach (var thing in _filteredThings.Skip(start).Take(PageSize))
 		{
 			var detail = criteria.Count == 0
 				? "No filters"
