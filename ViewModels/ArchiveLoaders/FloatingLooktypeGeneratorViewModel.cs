@@ -49,6 +49,8 @@ public sealed class LooktypeAddonOptionViewModel : ObservableObject
 
 public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, IDisposable, IThingFinderContextActionProvider
 {
+	public const double DefaultPanelWidth = 900;
+	public const double DefaultContentHeight = 750;
 	private const int MinimumPreviewIntervalMs = 16;
 	private readonly AssetsViewModel _parent;
 	private readonly SpriteRenderer _bitmapRenderer = new();
@@ -78,8 +80,16 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 	public LooktypeArchivePairViewModel? SelectedArchivePair
 	{
 		get => _selectedArchivePair;
-		set { if (SetProperty(ref _selectedArchivePair, value)) { RefreshArchiveChoices(); RefreshPreview(); if (!_loading) _parent.TriggerSaveAppState(); } }
+		set
+		{
+			if (!SetProperty(ref _selectedArchivePair, value)) return;
+			OnPropertyChanged(nameof(CanOpenFinder));
+			RefreshArchiveChoices();
+			RefreshPreview();
+			if (!_loading) _parent.TriggerSaveAppState();
+		}
 	}
+	public bool CanOpenFinder => SelectedArchivePair != null;
 
 	private bool _isOutfitMode = true;
 	public bool IsOutfitMode
@@ -211,7 +221,8 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 	public FloatingLooktypeGeneratorViewModel(AssetsViewModel parent)
 	{
 		_parent = parent;
-		PanelWidth = 900; ContentHeight = 800;
+		PanelWidth = DefaultPanelWidth;
+		ContentHeight = DefaultContentHeight;
 		foreach (var color in TibiaOutfitPalette.Create())
 		{
 			HeadColors.Add(new(color)); BodyColors.Add(new(color)); LegColors.Add(new(color)); FeetColors.Add(new(color));
@@ -303,6 +314,21 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 
 	[RelayCommand]
 	private void ClearCorpse() => SelectedCorpseId = null;
+
+	[RelayCommand]
+	private void FindOutfit() => OpenFinder(ThingKind.Outfit);
+
+	[RelayCommand]
+	private void FindMount() => OpenFinder(ThingKind.Outfit);
+
+	[RelayCommand]
+	private void FindCorpse() => OpenFinder(ThingKind.Item);
+
+	private void OpenFinder(ThingKind kind)
+	{
+		var source = SelectedArchivePair?.Pair.ThingsPanel;
+		if (source != null) _parent.OpenThingFinder(source, kind);
+	}
 
 	[RelayCommand]
 	private void ShowColorPalette(string part)

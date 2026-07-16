@@ -405,11 +405,11 @@ namespace NyxAssetsEditor.Services.Persistence
 						IsMinimized = panelState.IsMinimized,
 						PositionX = panelState.PositionX,
 						PositionY = panelState.PositionY,
-						PanelWidth = panelState.PanelWidth <= 0 || Math.Abs(panelState.PanelWidth - 980) < 0.5 || Math.Abs(panelState.PanelWidth - 1100) < 0.5
-							? 900
+						PanelWidth = panelState.PanelWidth <= 0
+							? FloatingLooktypeGeneratorViewModel.DefaultPanelWidth
 							: panelState.PanelWidth,
-						ContentHeight = panelState.ContentHeight <= 0 || Math.Abs(panelState.ContentHeight - 720) < 0.5
-							? 800
+						ContentHeight = panelState.ContentHeight <= 0
+							? FloatingLooktypeGeneratorViewModel.DefaultContentHeight
 							: panelState.ContentHeight,
 						IsDefaultPosition = false,
 					};

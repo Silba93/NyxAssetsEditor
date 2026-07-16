@@ -506,13 +506,16 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			RefreshLooktypeGenerators();
 		}
 
-		public void OpenThingFinder(FloatingThingsLoaderViewModel source)
+		public void OpenThingFinder(
+			FloatingThingsLoaderViewModel source,
+			NyxAssets.Things.ThingKind? selectedKind = null)
 		{
 			if (!source.IsArchiveLoaded) return;
 			var existing = ActivePanels.OfType<FloatingThingFinderViewModel>()
 				.FirstOrDefault(panel => ReferenceEquals(panel.SourcePanel, source));
 			if (existing != null)
 			{
+				if (selectedKind.HasValue) existing.SelectedKind = selectedKind.Value;
 				existing.IsVisible = true;
 				existing.IsMinimized = false;
 				if (existing.IsFloating)
@@ -523,10 +526,12 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				return;
 			}
 
-			AddPanel(new FloatingThingFinderViewModel(this, source)
+			var finder = new FloatingThingFinderViewModel(this, source)
 			{
 				IsVisible = true,
-			});
+			};
+			if (selectedKind.HasValue) finder.SelectedKind = selectedKind.Value;
+			AddPanel(finder);
 		}
 
 		public IReadOnlyList<ThingFinderContextAction> GetThingFinderContextActions(
