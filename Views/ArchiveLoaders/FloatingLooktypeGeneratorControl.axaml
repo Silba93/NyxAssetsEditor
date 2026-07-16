@@ -26,9 +26,12 @@
 						<Separator/><MenuItem Header="Close" Command="{Binding ClosePanelCommand}"/>
 					</ContextMenu>
 				</Border.ContextMenu>
-				<Grid ColumnDefinitions="*,Auto">
+				<Grid ColumnDefinitions="*,Auto,Auto">
 					<TextBlock Text="{Binding Title}" Foreground="#EEE" FontWeight="SemiBold" VerticalAlignment="Center"/>
-					<Button Grid.Column="1" Content="&#x00D7;" Command="{Binding ClosePanelCommand}" Width="26" Height="26" Padding="0" Background="Transparent" Foreground="#CCC"/>
+					<Button Grid.Column="1" Content="—" Command="{Binding ToggleMinimizeCommand}" Width="26" Height="26" Padding="0"
+						Background="Transparent" Foreground="#CCC" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+					<Button Grid.Column="2" Content="&#x00D7;" Command="{Binding ClosePanelCommand}" Width="26" Height="26" Padding="0"
+						Background="Transparent" Foreground="#CCC" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
 				</Grid>
 			</Border>
 
