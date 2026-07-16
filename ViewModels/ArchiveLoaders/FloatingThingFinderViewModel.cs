@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,7 +21,7 @@ public sealed record ThingFinderOption(string Value, string DisplayName)
 	public override string ToString() => DisplayName;
 }
 
-public sealed class ThingFinderFieldViewModel : ObservableObject
+public sealed partial class ThingFinderFieldViewModel : ObservableObject
 {
 	private readonly FloatingThingFinderViewModel _owner;
 	private bool _isActive;
@@ -38,7 +39,17 @@ public sealed class ThingFinderFieldViewModel : ObservableObject
 	public bool IsNumeric => Descriptor.ValueKind == ThingFinderValueKind.Number && !IsChoice;
 	public bool IsInteger => IsNumeric && Descriptor.Numeric is not { AllowsDecimal: true };
 	public bool IsDecimal => IsNumeric && Descriptor.Numeric is { AllowsDecimal: true };
+	public bool IsPaletteColor => Descriptor.Source == ThingFinderFieldSource.Thing
+		&& IsInteger
+		&& (Descriptor.Key == nameof(ThingType.LightColor) || Descriptor.Key == nameof(ThingType.MiniMapColor));
+	public bool UsesStandardIntegerInput => IsInteger && !IsPaletteColor;
 	public bool UsesTextValue => UsesValue && !IsNumeric && !IsChoice;
+	public IReadOnlyList<FloatingThingEditorViewModel.PaletteColor> PaletteColors => FloatingThingEditorViewModel.SharedPaletteColors;
+	public IBrush PaletteColorBrush => new SolidColorBrush(FloatingThingEditorViewModel.Get8BitColor(
+		(int)(NumericValue ?? NumericDefault)));
+	public string PalettePickerToolTip => Descriptor.Key == nameof(ThingType.LightColor)
+		? "Pick Light Color"
+		: "Pick Automap Color";
 	public decimal NumericMinimum => Descriptor.Numeric?.Minimum ?? 0;
 	public decimal NumericMaximum => Descriptor.Numeric?.Maximum ?? 65535;
 	public decimal NumericIncrement => Descriptor.Numeric?.Increment ?? 1;
@@ -85,6 +96,7 @@ public sealed class ThingFinderFieldViewModel : ObservableObject
 		set
 		{
 			if (!SetProperty(ref _numericValue, value)) return;
+			OnPropertyChanged(nameof(PaletteColorBrush));
 			_owner.ScheduleFilter();
 		}
 	}
@@ -103,7 +115,7 @@ public sealed class ThingFinderFieldViewModel : ObservableObject
 	{
 		_owner = owner;
 		Descriptor = descriptor;
-		Options = GetEditorOptions(descriptor.Key);
+		Options = GetEditorOptions(descriptor);
 	}
 
 	public ThingFinderCriterion? ToCriterion()
@@ -123,12 +135,20 @@ public sealed class ThingFinderFieldViewModel : ObservableObject
 		OnPropertyChanged(nameof(IsActive));
 		OnPropertyChanged(nameof(BooleanValue));
 		OnPropertyChanged(nameof(NumericValue));
+		OnPropertyChanged(nameof(PaletteColorBrush));
 		OnPropertyChanged(nameof(SelectedOption));
 		OnPropertyChanged(nameof(Value));
 	}
 
-	private static IReadOnlyList<ThingFinderOption> GetEditorOptions(string key)
+	[RelayCommand]
+	private void SelectPaletteColor(int colorIndex) => NumericValue = colorIndex;
+
+	private static IReadOnlyList<ThingFinderOption> GetEditorOptions(ThingFinderFieldDescriptor descriptor)
 	{
+		if (descriptor.Source != ThingFinderFieldSource.Thing)
+			return Array.Empty<ThingFinderOption>();
+
+		var key = descriptor.Key;
 		if (key == nameof(ThingType.MarketCategory))
 			return FloatingThingEditorViewModel.MarketCategories
 				.Select((name, index) => new ThingFinderOption((index + 1).ToString(CultureInfo.InvariantCulture), name))

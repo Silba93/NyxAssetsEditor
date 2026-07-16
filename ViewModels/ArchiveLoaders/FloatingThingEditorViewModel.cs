@@ -1501,6 +1501,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 
 	private static readonly System.Collections.Generic.List<PaletteColor> _paletteColors = GeneratePaletteColors();
 	public System.Collections.Generic.List<PaletteColor> PaletteColors => _paletteColors;
+	public static System.Collections.Generic.IReadOnlyList<PaletteColor> SharedPaletteColors => _paletteColors;
 
 	private static System.Collections.Generic.List<PaletteColor> GeneratePaletteColors()
 	{
