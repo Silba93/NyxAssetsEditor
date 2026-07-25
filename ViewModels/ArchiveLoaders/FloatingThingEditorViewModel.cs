@@ -287,7 +287,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	public bool ShowPatternZSlider => CurrentFrameGroup.PatternZ > 1;
 	public bool ShowAddonSlider => IsOutfit && CurrentFrameGroup.PatternY > 1;
 	public bool ShowFrameGroupSlider => UsesOutfitFrameGroups;
-	public bool ShowAnimationSection => ShowFrameSlider;
+	public bool ShowAnimationSection => ImprovedAnimations && ShowFrameSlider;
 	public bool ShowDurationEditors => ImprovedAnimations && ShowAnimationSection && ShowDurationEditorsForCategory;
 
 	public string LayerDisplay => $"{SelectedLayer + 1}/{Math.Max(1, (int)CurrentFrameGroup.Layers)}";
