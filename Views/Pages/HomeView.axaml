@@ -13,15 +13,18 @@
 
 			<!-- Recent Archives Section -->
 			<StackPanel Spacing="10">
-				<TextBlock Text="Recent Archives" FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+				<Grid ColumnDefinitions="*, Auto" Margin="0,0,0,5">
+					<TextBlock Grid.Column="0" Text="Recent Archives" FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+					<CheckBox Grid.Column="1" Content="Show .spr" IsChecked="{Binding ShowSpr}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+				</Grid>
 				
 				<!-- Placeholder if no recents -->
-				<Border IsVisible="{Binding !RecentCombinations.Count}" Background="#1E1E1E" CornerRadius="8" Padding="20">
-					<TextBlock Text="No recently opened archives. Open an archive from the Assets workspace to get started!" Foreground="#666666" FontStyle="Italic"/>
+				<Border IsVisible="{Binding !HasFilteredCombinations}" Background="#1E1E1E" CornerRadius="8" Padding="20">
+					<TextBlock Text="No recently opened archives matching filter. Open an archive from the Assets workspace to get started!" Foreground="#666666" FontStyle="Italic"/>
 				</Border>
 
 				<!-- List of Recents -->
-				<ItemsControl ItemsSource="{Binding RecentCombinations}" IsVisible="{Binding RecentCombinations.Count}">
+				<ItemsControl ItemsSource="{Binding FilteredRecentCombinations}" IsVisible="{Binding HasFilteredCombinations}">
 					<ItemsControl.ItemsPanel>
 						<ItemsPanelTemplate>
 							<WrapPanel Orientation="Horizontal" HorizontalAlignment="Left"/>
@@ -57,6 +60,7 @@
 											<!-- Texts -->
 											<StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
 												<TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis"/>
+												<TextBlock Text="{Binding ProjectName}" FontSize="12" FontWeight="SemiBold" Foreground="#5E94FF" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasProjectName}"/>
 												<TextBlock Text="{Binding DetailsText}" FontSize="11" Foreground="#666666" TextTrimming="CharacterEllipsis"/>
 											</StackPanel>
 										</Grid>

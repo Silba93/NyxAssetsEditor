@@ -14,6 +14,38 @@ namespace NyxAssetsEditor.ViewModels.Pages
 
 		public ObservableCollection<RecentCombinationItemViewModel> RecentCombinations { get; }
 
+		private bool _showSpr;
+		public bool ShowSpr
+		{
+			get => _showSpr;
+			set
+			{
+				if (SetProperty(ref _showSpr, value))
+				{
+					OnPropertyChanged(nameof(FilteredRecentCombinations));
+					OnPropertyChanged(nameof(HasFilteredCombinations));
+				}
+			}
+		}
+
+		public System.Collections.Generic.List<RecentCombinationItemViewModel> FilteredRecentCombinations
+		{
+			get
+			{
+				var list = new System.Collections.Generic.List<RecentCombinationItemViewModel>();
+				foreach (var item in RecentCombinations)
+				{
+					if (_showSpr || item.HasBoth)
+					{
+						list.Add(item);
+					}
+				}
+				return list;
+			}
+		}
+
+		public bool HasFilteredCombinations => FilteredRecentCombinations.Count > 0;
+
 		// Parameterless constructor for design-time
 		public HomeViewModel()
 		{
@@ -78,6 +110,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		{
 			NyxAssetsEditor.Services.Persistence.PersistenceService.RemoveRecentCombination(item.SpritePath, item.ThingsPath);
 			RecentCombinations.Remove(item);
+			OnPropertyChanged(nameof(FilteredRecentCombinations));
+			OnPropertyChanged(nameof(HasFilteredCombinations));
 		}
 	}
 }
