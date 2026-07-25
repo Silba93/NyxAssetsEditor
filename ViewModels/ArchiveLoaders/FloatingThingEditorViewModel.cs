@@ -84,6 +84,48 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	private string _promptText = string.Empty;
 	private System.Threading.Tasks.TaskCompletionSource<PromptResult>? _promptTcs;
 
+	private int _selectedTabIndex;
+	public int SelectedTabIndex
+	{
+		get => _selectedTabIndex;
+		set => SetProperty(ref _selectedTabIndex, value);
+	}
+
+	private Dictionary<string, string> _loadedFlags = new(StringComparer.Ordinal);
+
+	public class FlagVisibilityMap
+	{
+		private readonly FloatingThingEditorViewModel _vm;
+		public FlagVisibilityMap(FloatingThingEditorViewModel vm) => _vm = vm;
+		public bool this[string key] => _vm._loadedFlags.ContainsKey(key);
+	}
+
+	public class FlagLabelMap
+	{
+		private readonly FloatingThingEditorViewModel _vm;
+		private readonly Dictionary<string, string> _defaults;
+		public FlagLabelMap(FloatingThingEditorViewModel vm, Dictionary<string, string> defaults)
+		{
+			_vm = vm;
+			_defaults = defaults;
+		}
+		public string this[string key] => _vm._loadedFlags.TryGetValue(key, out var label) ? label : (_defaults.TryGetValue(key, out var def) ? def : key);
+	}
+
+	public FlagVisibilityMap FlagVisibility => new(this);
+	public FlagLabelMap FlagLabel => new(this, _defaultLabels);
+
+	public class FlagConfig
+	{
+		public byte id { get; set; }
+		public string? label { get; set; }
+	}
+
+	public class FlagsTomlModel
+	{
+		public Dictionary<string, FlagConfig>? flags { get; set; }
+	}
+
 	public enum PromptResult
 	{
 		Save,
@@ -193,7 +235,12 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		_outfitDirection = Direction4.South;
 		_missileDirection = Direction8.South;
 
+		LoadProtocolFlags();
 		NotifyThingProperties();
+		if (!IsItem && _selectedTabIndex == 2)
+		{
+			SelectedTabIndex = 0;
+		}
 		NotifyAppearanceControls();
 		OnPropertyChanged(nameof(SelectedFrameGroupIndex));
 		OnPropertyChanged(nameof(FrameGroupDisplay));
@@ -964,6 +1011,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		OnPropertyChanged(nameof(ShowBottomEffect));
 		OnPropertyChanged(nameof(ShowDontCenterOutfit));
 		OnPropertyChanged(nameof(ShowUsable));
+		OnPropertyChanged(nameof(ShowFloorChange));
 
 		// Notify remaining flags
 		OnPropertyChanged(nameof(IsGroundBorder));
@@ -1808,11 +1856,12 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	public bool ShowIsTranslucent => DatVersion >= DatVersionFormat.V5;
 	public bool ShowIgnoreLook => DatVersion >= DatVersionFormat.V4;
 	public bool ShowCloth => DatVersion >= DatVersionFormat.V5;
-	public bool ShowMarket => DatVersion >= DatVersionFormat.V5;
-	public bool ShowHasDefaultAction => DatVersion >= DatVersionFormat.V6;
-	public bool ShowWrappable => DatVersion == DatVersionFormat.V1 || DatVersion == DatVersionFormat.V2 || DatVersion >= DatVersionFormat.V5;
-	public bool ShowUnwrappable => DatVersion == DatVersionFormat.V1 || DatVersion == DatVersionFormat.V2 || DatVersion >= DatVersionFormat.V5;
-	public bool ShowBottomEffect => DatVersion == DatVersionFormat.V1 || DatVersion == DatVersionFormat.V2 || DatVersion >= DatVersionFormat.V5;
+	public bool ShowMarket => SettingsViewModel.ClientVersion >= 940 && IsItem;
+	public bool ShowHasDefaultAction => DatVersion >= DatVersionFormat.V6 && IsItem;
+	public bool ShowWrappable => DatVersion == DatVersionFormat.V1 || DatVersion == DatVersionFormat.V2 || DatVersion >= DatVersionFormat.V6;
+	public bool ShowUnwrappable => DatVersion == DatVersionFormat.V1 || DatVersion == DatVersionFormat.V2 || DatVersion >= DatVersionFormat.V6;
+	public bool ShowFloorChange => DatVersion <= DatVersionFormat.V4;
+	public bool ShowBottomEffect => DatVersion >= DatVersionFormat.V6;
 	public bool ShowDontCenterOutfit => DatVersion >= DatVersionFormat.V5;
 	public bool ShowUsable => DatVersion >= DatVersionFormat.V6;
 
@@ -2072,6 +2121,258 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	}
 
 	public void RequestApplyToCatalog() => ApplyToCatalog();
+
+	private string? FindTomlFile(string fileName)
+	{
+		string versionDirName = DatVersion.ToString().ToLowerInvariant();
+		string relativePath = System.IO.Path.Combine("Assets", "datProtocols", versionDirName, fileName);
+
+		// 1. Next to executable
+		string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativePath);
+		if (System.IO.File.Exists(path)) return path;
+
+		// 2. Working directory (project root in development)
+		path = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), relativePath);
+		if (System.IO.File.Exists(path)) return path;
+
+		// 3. Up from output directory
+		path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", relativePath);
+		if (System.IO.File.Exists(path)) return path;
+
+		return null;
+	}
+
+	private void LoadProtocolFlags()
+	{
+		string tomlText = "";
+		string? overridePath = FindTomlFile("flags_override.toml");
+		if (overridePath != null)
+		{
+			try { tomlText = System.IO.File.ReadAllText(overridePath); } catch { }
+		}
+
+		if (string.IsNullOrEmpty(tomlText))
+		{
+			string? defaultPath = FindTomlFile("flags.toml");
+			if (defaultPath != null)
+			{
+				try { tomlText = System.IO.File.ReadAllText(defaultPath); } catch { }
+			}
+		}
+
+		if (string.IsNullOrEmpty(tomlText))
+		{
+			try
+			{
+				string versionDirName = DatVersion.ToString().ToLowerInvariant();
+				using (var stream = Avalonia.Platform.AssetLoader.Open(new Uri($"avares://NyxAssetsEditor/Assets/datProtocols/{versionDirName}/flags.toml")))
+				using (var reader = new System.IO.StreamReader(stream))
+				{
+					tomlText = reader.ReadToEnd();
+				}
+			}
+			catch
+			{
+			}
+		}
+
+		if (!string.IsNullOrEmpty(tomlText))
+		{
+			try
+			{
+				var model = Tomlyn.TomlSerializer.Deserialize<FlagsTomlModel>(tomlText);
+				if (model != null && model.flags != null && model.flags.Count > 0)
+				{
+					_loadedFlags = model.flags.ToDictionary(pair => pair.Key, pair => pair.Value.label ?? pair.Key, StringComparer.Ordinal);
+					OnPropertyChanged(nameof(FlagVisibility));
+					OnPropertyChanged(nameof(FlagLabel));
+					return;
+				}
+			}
+			catch
+			{
+			}
+		}
+
+		_loadedFlags = GetDefaultFlagsForVersion(DatVersion);
+		OnPropertyChanged(nameof(FlagVisibility));
+		OnPropertyChanged(nameof(FlagLabel));
+	}
+
+	public static Dictionary<string, byte>? GetCustomFlagWriteMap(uint clientVersion)
+	{
+		var datVersion = DatThingFormatRules.SelectFromClientVersion(new ClientDataVersion { Value = clientVersion });
+		string versionDirName = datVersion.ToString().ToLowerInvariant();
+		string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+		string relativePath = System.IO.Path.Combine("Assets", "datProtocols", versionDirName);
+
+		string? FindPath(string fileName)
+		{
+			string p = System.IO.Path.Combine(baseDir, relativePath, fileName);
+			if (System.IO.File.Exists(p)) return p;
+			p = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), relativePath, fileName);
+			if (System.IO.File.Exists(p)) return p;
+			p = System.IO.Path.Combine(baseDir, "..", "..", "..", relativePath, fileName);
+			if (System.IO.File.Exists(p)) return p;
+			return null;
+		}
+
+		string tomlText = "";
+		string? overridePath = FindPath("flags_override.toml");
+		if (overridePath != null)
+		{
+			try { tomlText = System.IO.File.ReadAllText(overridePath); } catch { }
+		}
+
+		if (string.IsNullOrEmpty(tomlText))
+		{
+			string? defaultPath = FindPath("flags.toml");
+			if (defaultPath != null)
+			{
+				try { tomlText = System.IO.File.ReadAllText(defaultPath); } catch { }
+			}
+		}
+
+		if (string.IsNullOrEmpty(tomlText))
+		{
+			try
+			{
+				using (var stream = Avalonia.Platform.AssetLoader.Open(new Uri($"avares://NyxAssetsEditor/Assets/datProtocols/{versionDirName}/flags.toml")))
+				using (var reader = new System.IO.StreamReader(stream))
+				{
+					tomlText = reader.ReadToEnd();
+				}
+			}
+			catch
+			{
+			}
+		}
+
+		if (!string.IsNullOrEmpty(tomlText))
+		{
+			try
+			{
+				var model = Tomlyn.TomlSerializer.Deserialize<FlagsTomlModel>(tomlText);
+				if (model != null && model.flags != null && model.flags.Count > 0)
+				{
+					return model.flags.ToDictionary(pair => pair.Key, pair => pair.Value.id, StringComparer.Ordinal);
+				}
+			}
+			catch
+			{
+			}
+		}
+
+		return null;
+	}
+
+	private Dictionary<string, string> GetDefaultFlagsForVersion(DatVersionFormat version)
+	{
+		var flags = new Dictionary<string, string>(StringComparer.Ordinal)
+		{
+			["IsContainer"] = "Container",
+			["ForceUse"] = "Force Use",
+			["MultiUse"] = "Multi Use",
+			["IsFluidContainer"] = "Fluid Container",
+			["IsFluid"] = "Fluid",
+			["IsUnpassable"] = "Unpassable",
+			["IsUnmoveable"] = "Unmoveable",
+			["BlockMissile"] = "Block Missile",
+			["BlockPathfind"] = "Block Pathfinder",
+			["Pickupable"] = "Pickupable",
+			["Rotatable"] = "Rotatable",
+			["IsLyingObject"] = "Lying Object",
+			["IsFullGround"] = "Full Ground",
+		};
+
+		if (version == DatVersionFormat.V1)
+		{
+			flags["Wrappable"] = "Wrappable";
+			flags["Unwrappable"] = "Unwrappable";
+			flags["FloorChange"] = "Floor Change";
+		}
+		else if (version == DatVersionFormat.V2)
+		{
+			flags["Hangable"] = "Hangable";
+			flags["IsHorizontal"] = "Hook East";
+			flags["IsVertical"] = "Hook South";
+			flags["Wrappable"] = "Wrappable";
+			flags["Unwrappable"] = "Unwrappable";
+			flags["FloorChange"] = "Floor Change";
+		}
+		else if (version == DatVersionFormat.V3)
+		{
+			flags["Hangable"] = "Hangable";
+			flags["IsHorizontal"] = "Hook East";
+			flags["IsVertical"] = "Hook South";
+			flags["FloorChange"] = "Floor Change";
+		}
+		else if (version == DatVersionFormat.V4)
+		{
+			flags["Hangable"] = "Hangable";
+			flags["IsHorizontal"] = "Hook East";
+			flags["IsVertical"] = "Hook South";
+			flags["DontHide"] = "Don't Hide";
+			flags["IgnoreLook"] = "Ignore Look";
+			flags["FloorChange"] = "Floor Change";
+		}
+		else if (version == DatVersionFormat.V5)
+		{
+			flags["Hangable"] = "Hangable";
+			flags["IsHorizontal"] = "Hook East";
+			flags["IsVertical"] = "Hook South";
+			flags["DontHide"] = "Don't Hide";
+			flags["IsTranslucent"] = "Translucent";
+			flags["IgnoreLook"] = "Ignore Look";
+		}
+		else if (version == DatVersionFormat.V6)
+		{
+			flags["NoMoveAnimation"] = "No Move Animation";
+			flags["Hangable"] = "Hangable";
+			flags["IsHorizontal"] = "Hook East";
+			flags["IsVertical"] = "Hook South";
+			flags["DontHide"] = "Don't Hide";
+			flags["IsTranslucent"] = "Translucent";
+			flags["IgnoreLook"] = "Ignore Look";
+			flags["Usable"] = "Useable";
+			flags["Wrappable"] = "Wrappable";
+			flags["Unwrappable"] = "Unwrappable";
+			flags["BottomEffect"] = "Top Effect";
+		}
+
+		return flags;
+	}
+
+	private static readonly Dictionary<string, string> _defaultLabels = new(StringComparer.Ordinal)
+	{
+		["IsContainer"] = "Container",
+		["Stackable"] = "Stackable",
+		["ForceUse"] = "Force Use",
+		["MultiUse"] = "Multi Use",
+		["IsFluidContainer"] = "Fluid Container",
+		["IsFluid"] = "Fluid",
+		["IsUnpassable"] = "Unpassable",
+		["IsUnmoveable"] = "Unmoveable",
+		["BlockMissile"] = "Block Missile",
+		["BlockPathfind"] = "Block Pathfinder",
+		["FloorChange"] = "Floor Change",
+		["NoMoveAnimation"] = "No Move Animation",
+		["Pickupable"] = "Pickupable",
+		["Hangable"] = "Hangable",
+		["IsHorizontal"] = "Hook East",
+		["IsVertical"] = "Hook South",
+		["Rotatable"] = "Rotatable",
+		["DontHide"] = "Don't Hide",
+		["IsTranslucent"] = "Translucent",
+		["IsLyingObject"] = "Lying Object",
+		["IsFullGround"] = "Full Ground",
+		["IgnoreLook"] = "Ignore Look",
+		["Usable"] = "Useable",
+		["Wrappable"] = "Wrappable",
+		["Unwrappable"] = "Unwrappable",
+		["BottomEffect"] = "Top Effect",
+		["AnimateAlways"] = "Animate Always",
+	};
 }
 
 public partial class CustomFlagViewModel : ViewModelBase
