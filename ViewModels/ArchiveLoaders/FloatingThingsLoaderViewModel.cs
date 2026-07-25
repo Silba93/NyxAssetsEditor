@@ -610,6 +610,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			OnPropertyChanged(nameof(IsSpriteLoaderLoaded));
 			OnPropertyChanged(nameof(ShowSpritesNotLoadedWarning));
 			OnPropertyChanged(nameof(ShowLoadThingsDropzone));
+			OnPropertyChanged(nameof(CanCompile));
+			CompileCommand.NotifyCanExecuteChanged();
 			RefreshPreviews();
 		}
 
@@ -691,7 +693,88 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				if (SetProperty(ref _hasSavedChanges, value))
 				{
 					_parentViewModel?.RefreshCompileCommands();
+					CompileCommand.NotifyCanExecuteChanged();
 				}
+			}
+		}
+
+		public bool CanCompile => IsArchiveLoaded && LinkedSpritePanel != null && HasSavedChanges;
+
+		[RelayCommand(CanExecute = nameof(CanCompile))]
+		private async System.Threading.Tasks.Task Compile()
+		{
+			if (LinkedSpritePanel == null) return;
+			try
+			{
+				bool compileSprites = NyxAssetsEditor.ViewModels.Pages.SettingsViewModel.CompileLinkedPairTogether && LinkedSpritePanel.HasSavedChanges;
+
+				var (savedPage, savedId) = SaveViewState();
+
+				if (compileSprites)
+				{
+					ArchiveCompileService.BackupIfExists(LinkedSpritePanel.FilePath);
+					ArchiveCompileService.BackupIfExists(FilePath);
+
+					ArchiveCompileService.CompilePair(
+						LinkedSpritePanel,
+						this,
+						LinkedSpritePanel.FilePath,
+						FilePath);
+
+					await LinkedSpritePanel.LoadArchiveAsync(LinkedSpritePanel.FilePath);
+					LinkedSpritePanel.HasSavedChanges = false;
+					
+					await LoadArchiveAsync(FilePath, useLastLoadedSprite: false);
+					HasSavedChanges = false;
+				}
+				else
+				{
+					ArchiveCompileService.BackupIfExists(FilePath);
+					
+					var options = GetWriteOptions();
+					var format = ArchiveFormat;
+					if (format == ArchiveFormat.Dat)
+					{
+						using var datStream = File.Create(FilePath);
+						Catalog.WriteDatTo(datStream, options);
+					}
+					else
+					{
+						Catalog.ExportJson(FilePath, options);
+					}
+
+					await LoadArchiveAsync(FilePath, useLastLoadedSprite: false);
+					HasSavedChanges = false;
+				}
+				RestoreViewState(savedPage, savedId);
+				_parentViewModel?.RefreshCompileCommands();
+			}
+			catch (Exception ex)
+			{
+				ErrorMessage = $"Compile failed: {ex.Message}";
+			}
+		}
+
+		private (int page, uint thingId) SaveViewState() =>
+			(_currentPage, SelectedThing?.Id ?? 0);
+
+		private void RestoreViewState(int page, uint thingId)
+		{
+			int maxPage = TotalPages;
+			int target = Math.Min(page, maxPage > 0 ? maxPage : 1);
+			if (_currentPage != target)
+			{
+				_currentPage = target;
+				OnPropertyChanged(nameof(CurrentPage));
+				OnPropertyChanged(nameof(HasNextPage));
+				OnPropertyChanged(nameof(HasPreviousPage));
+				UpdatePage();
+			}
+			if (thingId != 0)
+			{
+				var item = PagedThings.FirstOrDefault(t => t.Id == thingId);
+				if (item != null)
+					SelectThing(item);
 			}
 		}
 

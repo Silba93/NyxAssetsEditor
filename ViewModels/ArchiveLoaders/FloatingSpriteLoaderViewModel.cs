@@ -41,7 +41,89 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				if (SetProperty(ref _hasSavedChanges, value))
 				{
 					ParentViewModel?.RefreshCompileCommands();
+					CompileCommand.NotifyCanExecuteChanged();
 				}
+			}
+		}
+
+		public bool CanCompile => IsArchiveLoaded && ParentViewModel != null && HasSavedChanges;
+
+		[RelayCommand(CanExecute = nameof(CanCompile))]
+		private async System.Threading.Tasks.Task Compile()
+		{
+			if (ParentViewModel == null) return;
+			var thingsPanel = ParentViewModel.GetCompilePairs().FirstOrDefault(p => p.SpritePanel == this)?.ThingsPanel;
+			if (thingsPanel == null) return;
+
+			try
+			{
+				bool compileThings = NyxAssetsEditor.ViewModels.Pages.SettingsViewModel.CompileLinkedPairTogether && thingsPanel.HasSavedChanges;
+
+				var (savedPage, savedId) = SaveViewState();
+
+				if (compileThings)
+				{
+					ArchiveCompileService.BackupIfExists(FilePath);
+					ArchiveCompileService.BackupIfExists(thingsPanel.FilePath);
+
+					ArchiveCompileService.CompilePair(
+						this,
+						thingsPanel,
+						FilePath,
+						thingsPanel.FilePath);
+
+					await LoadArchiveAsync(FilePath);
+					HasSavedChanges = false;
+
+					await thingsPanel.LoadArchiveAsync(thingsPanel.FilePath, useLastLoadedSprite: false);
+					thingsPanel.HasSavedChanges = false;
+				}
+				else
+				{
+					ArchiveCompileService.BackupIfExists(FilePath);
+					
+					var format = ArchiveFormat;
+					if (format == NyxAssetsEditor.ViewModels.Common.ArchiveFormat.Spr)
+					{
+						Loader.WriteSprTo(FilePath);
+					}
+					else
+					{
+						Loader.WriteAssetsTo(FilePath);
+					}
+
+					await LoadArchiveAsync(FilePath);
+					HasSavedChanges = false;
+				}
+				RestoreViewState(savedPage, savedId);
+				ParentViewModel.RefreshCompileCommands();
+			}
+			catch (Exception ex)
+			{
+				ErrorMessage = $"Compile failed: {ex.Message}";
+			}
+		}
+
+		private (int page, uint spriteId) SaveViewState() =>
+			(_currentPage, SelectedSprite?.Id ?? 0);
+
+		private void RestoreViewState(int page, uint spriteId)
+		{
+			int maxPage = TotalPages;
+			int target = Math.Min(page, maxPage > 0 ? maxPage : 1);
+			if (_currentPage != target)
+			{
+				_currentPage = target;
+				OnPropertyChanged(nameof(CurrentPage));
+				OnPropertyChanged(nameof(HasNextPage));
+				OnPropertyChanged(nameof(HasPreviousPage));
+				UpdatePage();
+			}
+			if (spriteId != 0)
+			{
+				var item = PagedSprites.FirstOrDefault(s => s.Id == spriteId);
+				if (item != null)
+					SelectSprite(item);
 			}
 		}
 
