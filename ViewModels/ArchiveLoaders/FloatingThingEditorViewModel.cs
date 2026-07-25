@@ -2372,6 +2372,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		["Unwrappable"] = "Unwrappable",
 		["BottomEffect"] = "Top Effect",
 		["AnimateAlways"] = "Animate Always",
+		["DontCenterOutfit"] = "Don't Center Outfit",
 	};
 }
 
