@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -17,8 +16,7 @@ public partial class FloatingCompileControl : UserControl
 		var titleBar = this.FindControl<Border>("TitleBar");
 		if (titleBar != null)
 		{
-			var interaction = new FloatingPanelInteraction(this, titleBar, minWidth: 400, minHeight: 300);
-			// No extra resize handles needed for this small simple control
+			_ = new FloatingPanelInteraction(this, titleBar, minWidth: 400, minHeight: 300);
 		}
 	}
 
@@ -42,11 +40,11 @@ public partial class FloatingCompileControl : UserControl
 			SuggestedFileName = suggestedFileName,
 			FileTypeChoices = extension switch
 			{
-				".spr" => new[] { new FilePickerFileType("Nyx Sprite Archive") { Patterns = new[] { "*.spr" } } },
-				".assets" => new[] { new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } } },
-				".dat" => new[] { new FilePickerFileType("Nyx Dat Archive") { Patterns = new[] { "*.dat" } } },
-				".json" => new[] { new FilePickerFileType("Nyx Things JSON") { Patterns = new[] { "*.json" } } },
-				_ => Array.Empty<FilePickerFileType>()
+				".spr" => [new FilePickerFileType("Nyx Sprite Archive") { Patterns = ["*.spr"] }],
+				".assets" => [new FilePickerFileType("Nyx Asset Archive") { Patterns = ["*.assets"] }],
+				".dat" => [new FilePickerFileType("Nyx Dat Archive") { Patterns = ["*.dat"] }],
+				".json" => [new FilePickerFileType("Nyx Things JSON") { Patterns = ["*.json"] }],
+				_ => []
 			}
 		});
 
