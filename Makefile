@@ -26,8 +26,14 @@ build:
 
 clean:
 	$(DOTNET) clean NyxAssetsEditor.csproj
+ifeq ($(OS),Windows_NT)
+	@if exist $(OUTPUT_DIR) rmdir /s /q $(OUTPUT_DIR)
+	@if exist bin rmdir /s /q bin
+	@if exist obj rmdir /s /q obj
+else
 	rm -rf $(OUTPUT_DIR)
 	rm -rf bin obj
+endif
 
 publish: publish-win publish-linux publish-osx
 
