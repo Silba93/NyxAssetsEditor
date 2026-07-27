@@ -33,6 +33,13 @@ NyxAssetsEditor/
 └── docs/                    # Project documentation
 ```
 
+## Assets & resource loading
+
+To keep the single-file compiled `.exe` size minimal and allow developers/users to easily swap or customize UI graphics, the `Assets/` directory is decoupled from assembly resources:
+
+* **File Copying**: Assets are defined as `<Content>` rather than `<AvaloniaResource>`, copying the `Assets/` folder to the target output directory at build time.
+* **FileSystemAssetLoader**: A custom `IAssetLoader` wrapper ([FileSystemAssetLoader.cs](file:///d:/ReposCSharp/NyxAssetsEditor/Core/FileSystemAssetLoader.cs)) is registered at startup via reflection. It intercepts internal `avares://` requests pointing to `/Assets/` and loads the files directly from the disk relative to the executable (`AppDomain.CurrentDomain.BaseDirectory`), preserving clean XAML referencing.
+
 ## Navigation & views
 
 Top-level pages use **`ViewLocator`** (`ViewModel` → `View` by naming convention). Archive panels use **`DataTemplate`** mappings in `AssetsView`. Details: [structure.md](structure.md#view--viewmodel-pairing).
