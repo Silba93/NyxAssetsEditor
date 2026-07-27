@@ -271,7 +271,110 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	public bool IsMissile => Kind == ThingKind.Missile;
 	public bool IsItem => Kind == ThingKind.Item;
 	public bool IsEffect => Kind == ThingKind.Effect;
-	public bool ShowOutfitDirections => IsOutfit;
+	public bool ShowOutfitDirections => IsOutfit && !ShowAllOutfitDirections;
+
+	private bool _showAllOutfitDirections;
+	public bool ShowAllOutfitDirections
+	{
+		get => _showAllOutfitDirections;
+		set
+		{
+			if (SetProperty(ref _showAllOutfitDirections, value))
+			{
+				OnPropertyChanged(nameof(ShowOutfitDirections));
+				RefreshAppearance();
+			}
+		}
+	}
+
+	private DispatcherTimer? _rotateTimer;
+	private bool _autoRotate;
+	public bool AutoRotate
+	{
+		get => _autoRotate;
+		set
+		{
+			if (SetProperty(ref _autoRotate, value))
+			{
+				if (value) StartRotateTimer();
+				else StopRotateTimer();
+			}
+		}
+	}
+
+	private int _rotateSpeedMs = 500;
+	public int RotateSpeedMs
+	{
+		get => _rotateSpeedMs;
+		set
+		{
+			if (SetProperty(ref _rotateSpeedMs, value))
+			{
+				if (AutoRotate)
+				{
+					StopRotateTimer();
+					StartRotateTimer();
+				}
+			}
+		}
+	}
+
+	private void StartRotateTimer()
+	{
+		_rotateTimer?.Stop();
+		_rotateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(50, _rotateSpeedMs)) };
+		_rotateTimer.Tick += OnRotateTimerTick;
+		_rotateTimer.Start();
+	}
+
+	private void StopRotateTimer()
+	{
+		if (_rotateTimer != null)
+		{
+			_rotateTimer.Tick -= OnRotateTimerTick;
+			_rotateTimer.Stop();
+			_rotateTimer = null;
+		}
+	}
+
+	private void OnRotateTimerTick(object? sender, EventArgs e)
+	{
+		if (!AutoRotate) return;
+		var nextDir = (Direction4)(((int)_outfitDirection + 1) % 4);
+		SetOutfitDirection(nextDir);
+	}
+
+	private bool _useCustomPlaySpeed;
+	public bool UseCustomPlaySpeed
+	{
+		get => _useCustomPlaySpeed;
+		set
+		{
+			if (SetProperty(ref _useCustomPlaySpeed, value))
+			{
+				if (IsAnimationPlaying)
+				{
+					ArmAnimationTimer(SelectedFrame);
+				}
+			}
+		}
+	}
+
+	private int _playSpeedMs = 100;
+	public int PlaySpeedMs
+	{
+		get => _playSpeedMs;
+		set
+		{
+			if (SetProperty(ref _playSpeedMs, value))
+			{
+				if (IsAnimationPlaying)
+				{
+					ArmAnimationTimer(SelectedFrame);
+				}
+			}
+		}
+	}
 	public bool ShowMissileDirections => false;
 	public bool ShowLayerSlider => CurrentFrameGroup.Layers > 1;
 	public bool UsesOutfitFrameGroups => IsOutfit && OutfitFrameGroupsEnabled && Thing.FrameGroups.Count > 1;
@@ -279,7 +382,24 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	public bool IsAnimationPlaying
 	{
 		get => _isAnimationPlaying;
-		private set => SetProperty(ref _isAnimationPlaying, value);
+		private set
+		{
+			if (SetProperty(ref _isAnimationPlaying, value))
+			{
+				OnPropertyChanged(nameof(AutoPlay));
+			}
+		}
+	}
+
+	public bool AutoPlay
+	{
+		get => IsAnimationPlaying;
+		set
+		{
+			if (value) StartAnimationPreview();
+			else StopAnimationPreview();
+			OnPropertyChanged(nameof(AutoPlay));
+		}
 	}
 	public bool ShowPatternGrid => !IsOutfit && !IsMissile;
 	public bool ShowPatternXSlider => false;
@@ -444,6 +564,22 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	{
 		ShowAddSpriteConfirmation = false;
 		ClearPendingSpriteDrop();
+	}
+
+	[RelayCommand]
+	private void InferCropSize()
+	{
+		var loader = SourcePanel.GetActiveSpriteLoader();
+		if (loader == null) return;
+
+		var fg = CurrentFrameGroup;
+		var inferredSize = ThingFrameGroupEditor.InferCropSize(fg, id =>
+		{
+			try { return loader.LoadSpritePixels(id); }
+			catch { return null; }
+		});
+
+		CropSize = inferredSize;
 	}
 
 	private void ClearPendingSpriteDrop()
@@ -864,7 +1000,9 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		if (!IsAnimationPlaying)
 			return;
 
-		var delayMs = Math.Max(16, GetFrameDelayMs(frameIndex));
+		var delayMs = UseCustomPlaySpeed 
+			? (double)Math.Max(16, PlaySpeedMs) 
+			: (double)Math.Max(16u, GetFrameDelayMs(frameIndex));
 		_animationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
 		_animationTimer.Tick += OnAnimationTimerTick;
 		_animationTimer.Start();
@@ -1165,6 +1303,12 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 			rgba = ThingAppearanceRenderer.RenderMissileDirectionGrid(Thing, loader, options);
 			w = (int)(fg.Width * edge) * 3;
 			h = (int)(fg.Height * edge) * 3;
+		}
+		else if (IsOutfit && ShowAllOutfitDirections)
+		{
+			rgba = ThingAppearanceRenderer.RenderOutfitDirectionGrid(Thing, loader, options);
+			w = (int)(fg.Width * edge) * 4;
+			h = (int)(fg.Height * edge);
 		}
 		else if (ShowPatternGrid)
 		{
