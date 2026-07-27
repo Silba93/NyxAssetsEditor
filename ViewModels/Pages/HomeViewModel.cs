@@ -87,6 +87,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 
 			_ = LoadContributorsAsync();
+			_ = CheckForUpdatesAsync();
 		}
 
 		private static readonly HttpClient _http = new HttpClient();
@@ -184,6 +185,87 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			OnPropertyChanged(nameof(FilteredRecentCombinations));
 			OnPropertyChanged(nameof(HasFilteredCombinations));
 		}
+
+		public string CurrentVersion
+		{
+			get
+			{
+				var version = typeof(HomeViewModel).Assembly.GetName().Version;
+				if (version == null || (version.Major == 1 && version.Minor == 0 && version.Build == 0 && version.Revision == 0))
+					return "0.0.0";
+				return $"{version.Major}.{version.Minor}.{version.Build}";
+			}
+		}
+
+		private string _latestVersion = "";
+		public string LatestVersion
+		{
+			get => _latestVersion;
+			set => SetProperty(ref _latestVersion, value);
+		}
+
+		private string _releaseUrl = "https://github.com/Tofame/NyxAssetsEditor/releases";
+		public string ReleaseUrl
+		{
+			get => _releaseUrl;
+			set => SetProperty(ref _releaseUrl, value);
+		}
+
+		private bool _isNewVersionAvailable;
+		public bool IsNewVersionAvailable
+		{
+			get => _isNewVersionAvailable;
+			set => SetProperty(ref _isNewVersionAvailable, value);
+		}
+
+		public void OpenReleaseWebsite()
+		{
+			try
+			{
+				var psi = new System.Diagnostics.ProcessStartInfo
+				{
+					FileName = ReleaseUrl,
+					UseShellExecute = true
+				};
+				System.Diagnostics.Process.Start(psi);
+			}
+			catch { }
+		}
+
+		private async Task CheckForUpdatesAsync()
+		{
+			try
+			{
+				_http.DefaultRequestHeaders.UserAgent.TryParseAdd("NyxAssetsEditor");
+				var url = "https://api.github.com/repos/Tofame/NyxAssetsEditor/releases/latest";
+				var release = await _http.GetFromJsonAsync<GithubRelease>(url);
+				if (release != null && !string.IsNullOrEmpty(release.TagName))
+				{
+					var latest = release.TagName.TrimStart('v', 'V');
+					LatestVersion = latest;
+					ReleaseUrl = release.HtmlUrl;
+
+					if (Version.TryParse(latest, out var latestVer) && Version.TryParse(CurrentVersion, out var currentVer))
+					{
+						IsNewVersionAvailable = latestVer > currentVer;
+					}
+					else
+					{
+						IsNewVersionAvailable = latest != CurrentVersion && CurrentVersion == "0.0.0";
+					}
+				}
+			}
+			catch
+			{
+				// Keep app working without internet
+			}
+		}
+	}
+
+	file class GithubRelease
+	{
+		[JsonPropertyName("tag_name")] public string TagName { get; set; } = "";
+		[JsonPropertyName("html_url")] public string HtmlUrl { get; set; } = "";
 	}
 
 	public class ContributorViewModel

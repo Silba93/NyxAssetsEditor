@@ -6,10 +6,23 @@
 	<ScrollViewer>
 		<StackPanel Margin="30" Spacing="25">
 			<!-- Header -->
-			<StackPanel Spacing="5">
-				<TextBlock Text="{Binding Title, Mode=OneWay}" FontSize="28" FontWeight="Bold" Foreground="#5E94FF"/>
-				<TextBlock Text="{Binding Description, Mode=OneWay}" FontSize="14" Foreground="#888888" TextWrapping="Wrap"/>
-			</StackPanel>
+			<Grid ColumnDefinitions="*,Auto">
+				<StackPanel Grid.Column="0" Spacing="5">
+					<TextBlock Text="{Binding Title, Mode=OneWay}" FontSize="28" FontWeight="Bold" Foreground="#5E94FF"/>
+					<TextBlock Text="{Binding Description, Mode=OneWay}" FontSize="14" Foreground="#888888" TextWrapping="Wrap"/>
+				</StackPanel>
+				<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+					<TextBlock Text="{Binding CurrentVersion, StringFormat='v{0}'}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+					
+					<!-- Update warning (only shown if a new version is available) -->
+					<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsNewVersionAvailable}" VerticalAlignment="Center">
+						<TextBlock Text="New version available!" Foreground="#FFB85C" FontSize="12" VerticalAlignment="Center" FontWeight="SemiBold"/>
+						<Button Command="{Binding OpenReleaseWebsite}" ToolTip.Tip="{Binding LatestVersion, StringFormat='Go to releases: v{0}'}" Padding="0" Background="Transparent" BorderThickness="0" Width="20" Height="20" VerticalAlignment="Center">
+							<Image Source="/Assets/Icons/home/link.png" Width="14" Height="14"/>
+						</Button>
+					</StackPanel>
+				</StackPanel>
+			</Grid>
 
 			<!-- Recent Archives Section -->
 			<StackPanel Spacing="10">
