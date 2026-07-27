@@ -63,3 +63,8 @@ Web Export options (PNG only):
 | Zopfli | `-o 3 --zopfli` | Slowest; often smallest. Mutually exclusive with max. Uses oxipng's built-in Zopfli — no separate `zopflipng` install |
 
 Neither extra option → default `-o 3`.
+
+## Releasing a New Version
+
+* **Local Builds**: Manually increment `<Version>` and `<AssemblyVersion>` in `NyxAssetsEditor.csproj` before running `make publish`.
+* **CI/CD Releases**: Manually trigger the **Build and Release** workflow on GitHub Actions. You can specify a version (e.g., `1.0.1`) or leave it empty to automatically increment the patch version of the latest tag.
