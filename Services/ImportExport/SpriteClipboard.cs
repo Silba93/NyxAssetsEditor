@@ -74,7 +74,7 @@ public static class SpriteClipboard
 		try
 		{
 			using var ms = new MemoryStream();
-			bitmap.Save(ms);
+			bitmap.Save(ms, new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
 			ms.Position = 0;
 
 			using var skBitmap = SkiaSharp.SKBitmap.Decode(ms);
@@ -91,7 +91,7 @@ public static class SpriteClipboard
 				var info = new SkiaSharp.SKImageInfo(edge, edge, SkiaSharp.SKColorType.Rgba8888, SkiaSharp.SKAlphaType.Unpremul);
 				using var target = new SkiaSharp.SKBitmap(info);
 				using var canvas = new SkiaSharp.SKCanvas(target);
-				canvas.DrawBitmap(skBitmap, 0, 0);
+				canvas.DrawBitmap(skBitmap, 0, 0, SkiaSharp.SKSamplingOptions.Default);
 				return target.Bytes;
 			}
 

@@ -23,6 +23,8 @@ namespace NyxAssetsEditor.Views.Pages
 			{
 				_viewModel.CompileAsHandler = null;
 				_viewModel.PositionWebExportHandler = null;
+				_viewModel.PositionLooktypeGeneratorHandler = null;
+				_viewModel.PositionSlicerHandler = null;
 			}
 
 			_viewModel = DataContext as AssetsViewModel;
@@ -30,6 +32,8 @@ namespace NyxAssetsEditor.Views.Pages
 			{
 				_viewModel.CompileAsHandler = ShowCompileAsDialogAsync;
 				_viewModel.PositionWebExportHandler = PositionAndOpenWebExport;
+				_viewModel.PositionLooktypeGeneratorHandler = PositionAndOpenLooktypeGenerator;
+				_viewModel.PositionSlicerHandler = PositionAndOpenSlicer;
 			}
 		}
 
@@ -117,6 +121,68 @@ namespace NyxAssetsEditor.Views.Pages
 			}
 
 			var panel = new NyxAssetsEditor.ViewModels.ArchiveLoaders.FloatingWebExportViewModel(_viewModel)
+			{
+				DockState = "Floating",
+				PanelWidth = panelW,
+				ContentHeight = panelH,
+				PositionX = Math.Max(0, posX),
+				PositionY = Math.Max(0, posY),
+				IsVisible = true,
+			};
+
+			_viewModel.AddPanelFromView(panel);
+		}
+
+		private void PositionAndOpenLooktypeGenerator(double panelW, double panelH)
+		{
+			if (_viewModel == null) return;
+
+			double posX = 60;
+			double posY = 60;
+
+			var centerGrid = this.FindControl<Grid>("CenterDockColumn");
+			if (centerGrid != null)
+			{
+				var bounds = centerGrid.Bounds;
+				if (bounds.Width > 0 && bounds.Height > 0)
+				{
+					posX = bounds.X + (bounds.Width - panelW) / 2;
+					posY = bounds.Y + (bounds.Height - panelH) / 2;
+				}
+			}
+
+			var panel = new NyxAssetsEditor.ViewModels.ArchiveLoaders.FloatingLooktypeGeneratorViewModel(_viewModel)
+			{
+				DockState = "Floating",
+				PanelWidth = panelW,
+				ContentHeight = panelH,
+				PositionX = Math.Max(0, posX),
+				PositionY = Math.Max(0, posY),
+				IsVisible = true,
+			};
+
+			_viewModel.AddPanelFromView(panel);
+		}
+
+		private void PositionAndOpenSlicer(double panelW, double panelH, NyxAssetsEditor.ViewModels.ArchiveLoaders.FloatingSpriteLoaderViewModel? origin)
+		{
+			if (_viewModel == null) return;
+
+			double posX = 60;
+			double posY = 60;
+
+			var centerGrid = this.FindControl<Grid>("CenterDockColumn");
+			if (centerGrid != null)
+			{
+				var bounds = centerGrid.Bounds;
+				if (bounds.Width > 0 && bounds.Height > 0)
+				{
+					posX = bounds.X + (bounds.Width - panelW) / 2;
+					posY = bounds.Y + (bounds.Height - panelH) / 2;
+				}
+			}
+
+			var panel = new NyxAssetsEditor.ViewModels.Pages.SpritesheetSlicerViewModel(_viewModel, origin)
 			{
 				DockState = "Floating",
 				PanelWidth = panelW,

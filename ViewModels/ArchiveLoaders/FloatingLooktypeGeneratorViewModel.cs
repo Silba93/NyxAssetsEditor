@@ -387,7 +387,7 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 
 		_serviceMessage = result.Warnings.Count > 0 ? string.Join(" ", result.Warnings) : null;
 		_applyingAppearanceText = true;
-		try { LoadWorking(result.Profile); }
+		try { if (result.Profile != null) LoadWorking(result.Profile); }
 		finally { _applyingAppearanceText = false; }
 	}
 

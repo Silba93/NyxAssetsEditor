@@ -127,7 +127,7 @@ public static class SpritesheetSlicerService
 		using (var canvas = new SKCanvas(converted))
 		{
 			canvas.Clear(SKColors.Transparent);
-			canvas.DrawBitmap(bitmap, 0, 0);
+			canvas.DrawBitmap(bitmap, 0, 0, SKSamplingOptions.Default);
 		}
 		return RemoveOpaqueMagenta(new SlicerImage(converted.Width, converted.Height, converted.Bytes));
 	}

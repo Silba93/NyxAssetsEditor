@@ -1356,7 +1356,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		[RelayCommand]
 		private void PasteSelection()
 		{
-			if (ActiveLayer == null || _copyBuffer == null || _copyBufferWidth <= 0 || _copyBufferHeight <= 0)
+			if (ActiveLayer == null || _copyBuffer == null || _copyBufferMask == null || _copyBufferWidth <= 0 || _copyBufferHeight <= 0)
 				return;
 
 			SaveHistoryState();

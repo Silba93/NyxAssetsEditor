@@ -43,6 +43,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 
 		public Func<System.Threading.Tasks.Task>? CompileAsHandler { get; set; }
 		public Action<double, double>? PositionWebExportHandler { get; set; }
+		public Action<double, double>? PositionLooktypeGeneratorHandler { get; set; }
+		public Action<double, double, FloatingSpriteLoaderViewModel?>? PositionSlicerHandler { get; set; }
 		public bool CanCompile => GetCompilePairs().Any() && GetCompilePairs().Any(p => p.ThingsPanel.HasSavedChanges || p.SpritePanel.HasSavedChanges);
 		public bool CanCompileAs => GetCompilePairs().Any();
 
@@ -548,8 +550,17 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				return;
 			}
 
+			if (PositionLooktypeGeneratorHandler != null)
+			{
+				PositionLooktypeGeneratorHandler(FloatingLooktypeGeneratorViewModel.DefaultPanelWidth, FloatingLooktypeGeneratorViewModel.DefaultContentHeight);
+				return;
+			}
+
 			AddPanel(new FloatingLooktypeGeneratorViewModel(this)
 			{
+				DockState = "Floating",
+				PanelWidth = FloatingLooktypeGeneratorViewModel.DefaultPanelWidth,
+				ContentHeight = FloatingLooktypeGeneratorViewModel.DefaultContentHeight,
 				PositionX = 60,
 				PositionY = 60,
 				IsVisible = true,
@@ -606,9 +617,17 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				return;
 			}
 
+			if (PositionSlicerHandler != null)
+			{
+				PositionSlicerHandler(SpritesheetSlicerViewModel.DefaultPanelWidth, SpritesheetSlicerViewModel.DefaultContentHeight, origin);
+				return;
+			}
+
 			AddPanel(new SpritesheetSlicerViewModel(this, origin)
 			{
 				DockState = "Floating",
+				PanelWidth = SpritesheetSlicerViewModel.DefaultPanelWidth,
+				ContentHeight = SpritesheetSlicerViewModel.DefaultContentHeight,
 				PositionX = 60,
 				PositionY = 60,
 				IsVisible = true,

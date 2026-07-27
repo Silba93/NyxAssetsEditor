@@ -21,7 +21,7 @@
 					<StackPanel Spacing="4">
 						<TextBlock Text="Folder" Foreground="#A0A0A0" FontSize="11"/>
 						<Grid ColumnDefinitions="*,Auto">
-							<TextBox Name="PathInput" Watermark="Select folder…" Height="28" VerticalContentAlignment="Center"/>
+							<TextBox Name="PathInput" PlaceholderText="Select folder…" Height="28" VerticalContentAlignment="Center"/>
 							<Button Grid.Column="1" Content="Browse…" Margin="6,0,0,0" Padding="10,6" FontSize="11" Click="OnBrowseClick"/>
 						</Grid>
 					</StackPanel>

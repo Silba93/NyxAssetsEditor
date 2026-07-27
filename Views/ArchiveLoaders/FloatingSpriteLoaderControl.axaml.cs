@@ -73,7 +73,8 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 		{
 			if (_viewModel == null) return;
 			var topLevel = TopLevel.GetTopLevel(this);
-			if (topLevel is not Window window)
+			Window? window = topLevel as Window;
+			if (window == null)
 			{
 				window = this.VisualRoot as Window;
 			}

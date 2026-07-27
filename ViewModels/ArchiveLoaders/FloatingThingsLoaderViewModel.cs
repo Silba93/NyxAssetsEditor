@@ -810,14 +810,17 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					
 					var options = GetWriteOptions();
 					var format = ArchiveFormat;
-					if (format == ArchiveFormat.Dat)
+					if (Catalog != null)
 					{
-						using var datStream = File.Create(FilePath);
-						Catalog.WriteDatTo(datStream, options);
-					}
-					else
-					{
-						Catalog.ExportJson(FilePath, options);
+						if (format == ArchiveFormat.Dat)
+						{
+							using var datStream = File.Create(FilePath);
+							Catalog.WriteDatTo(datStream, options);
+						}
+						else
+						{
+							Catalog.ExportJson(FilePath, options);
+						}
 					}
 
 					await LoadArchiveAsync(FilePath, useLastLoadedSprite: false);
