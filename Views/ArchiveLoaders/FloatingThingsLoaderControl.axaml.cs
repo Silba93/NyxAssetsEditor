@@ -212,33 +212,45 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 				return;
 
 			var topLevel = TopLevel.GetTopLevel(this);
-			if (topLevel == null)
+			var window = topLevel as Window ?? this.VisualRoot as Window;
+			if (window == null)
 				return;
 
 			var format = e.Format.ToLowerInvariant();
 			switch (format)
 			{
 				case "import":
-					await HandleThingImport(vm, topLevel, replace: false, e.Things);
+					await HandleThingImport(vm, window, replace: false, e.Things);
 					break;
 				case "replace":
-					await HandleThingImport(vm, topLevel, replace: true, e.Things);
+					await HandleThingImport(vm, window, replace: true, e.Things);
+					break;
+				case "export_popup":
+					{
+						string defaultName = vm.SectionLabel;
+						var dialog = new AssetExportDialog(defaultName, showThingsFormats: true);
+						await dialog.ShowDialog(window);
+						if (dialog.IsConfirmed)
+						{
+							PerformThingExport(vm, e.Things, dialog.ExportName, dialog.ExportPath, dialog.ExportFormat);
+						}
+					}
 					break;
 				case "nyx-thing":
 				case "obd":
-					await HandleThingPortableExport(vm, topLevel, e.Things, format);
+					await HandleThingPortableExport(vm, window, e.Things, format);
 					break;
 				default:
-					await HandleThingSpritesheetExport(vm, topLevel, e, format);
+					await HandleThingSpritesheetExport(vm, window, e, format);
 					break;
 			}
 		}
 
 		private static readonly FilePickerFileType[] ThingExchangeFileTypes =
 		{
+			new FilePickerFileType("All Supported") { Patterns = new[] { "*.json", "*.obd" } },
 			new FilePickerFileType("Nyx Thing JSON") { Patterns = new[] { "*.json" } },
 			new FilePickerFileType("Object Builder OBD") { Patterns = new[] { "*.obd" } },
-			new FilePickerFileType("All Supported") { Patterns = new[] { "*.json", "*.obd" } },
 		};
 
 		private static async Task HandleThingImport(
@@ -255,8 +267,8 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 
 			var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
 			{
-				Title = replace ? "Replace Thing from File" : "Import Thing from File",
-				AllowMultiple = false,
+				Title = replace ? "Replace Thing from File" : "Import Things from Files",
+				AllowMultiple = !replace,
 				FileTypeFilter = ThingExchangeFileTypes,
 			});
 
@@ -265,18 +277,27 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 
 			try
 			{
-				var path = files[0].Path.LocalPath;
-				var document = ThingExchangeHelper.LoadFromPath(path, vm.GetWriteOptions());
-
 				if (replace)
 				{
+					var path = files[0].Path.LocalPath;
+					var document = ThingExchangeHelper.LoadFromPath(path, vm.GetWriteOptions());
 					foreach (var target in targets)
 						vm.ApplyImportedDocument(document, target.Id, replaceExisting: true);
 				}
 				else
 				{
-					var assignId = ThingExchangeHelper.GetNextAppendId(vm.Catalog, document.Thing.Kind);
-					vm.ApplyImportedDocument(document, assignId, replaceExisting: false);
+					// Sort files alphanumerically (natural sort) by filename so that order is respected
+					var sortedFiles = files.OrderBy(f => 
+						System.Text.RegularExpressions.Regex.Replace(f.Name ?? "", @"\d+", m => m.Value.PadLeft(10, '0'))
+					).ToList();
+
+					foreach (var file in sortedFiles)
+					{
+						var path = file.Path.LocalPath;
+						var document = ThingExchangeHelper.LoadFromPath(path, vm.GetWriteOptions());
+						var assignId = ThingExchangeHelper.GetNextAppendId(vm.Catalog, document.Thing.Kind);
+						vm.ApplyImportedDocument(document, assignId, replaceExisting: false);
+					}
 				}
 			}
 			catch (Exception ex)
@@ -473,6 +494,92 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 
 			if (!ok)
 				throw new InvalidOperationException($"ThingSpriteSheetExporter could not write spritesheet for thing {thing.Id}.");
+		}
+
+		private static void PerformThingExport(
+			FloatingThingsLoaderViewModel vm,
+			IReadOnlyList<ThingItemViewModel> things,
+			string name,
+			string folderPath,
+			string format)
+		{
+			if (things.Count == 0)
+				return;
+
+			var loader = vm.GetActiveSpriteLoader();
+			if (loader == null)
+			{
+				System.Diagnostics.Debug.WriteLine("[ThingsLoader] Export requires a loaded sprite archive.");
+				return;
+			}
+
+			var options = vm.GetWriteOptions();
+			var formatLower = format.ToLowerInvariant();
+			var isObd = formatLower == "obd";
+			var isJson = formatLower == "nyx-thing";
+			var extension = isObd ? ".obd" : isJson ? ".json" : formatLower is "jpg" or "jpeg" ? ".jpg" : formatLower == "bmp" ? ".bmp" : ".png";
+
+			try
+			{
+				if (!Directory.Exists(folderPath))
+				{
+					Directory.CreateDirectory(folderPath);
+				}
+
+				if (things.Count == 1)
+				{
+					var thingVm = things[0];
+					var thingType = vm.GetThingType(thingVm.Id);
+					if (thingType == null)
+						return;
+
+					var outputPath = Path.Combine(folderPath, $"{name}_{thingVm.DisplayedId}{extension}");
+					if (isObd)
+					{
+						var document = ThingExchangeHelper.CreatePortableDocument(thingType, loader, options);
+						ThingExchangeHelper.WriteObd(outputPath, document, options);
+					}
+					else if (isJson)
+					{
+						var document = ThingExchangeHelper.CreatePortableDocument(thingType, loader, options);
+						ThingExchangeHelper.WriteNyxThingJson(outputPath, document);
+					}
+					else
+					{
+						WriteThingSpritesheetExport(loader, thingType, outputPath, formatLower);
+					}
+				}
+				else
+				{
+					using var spriteSource = new SpriteLoaderSpriteSource(loader);
+					foreach (var thingVm in things)
+					{
+						var thingType = vm.GetThingType(thingVm.Id);
+						if (thingType == null)
+							continue;
+
+						var outputPath = Path.Combine(folderPath, $"{name}_{thingVm.DisplayedId}{extension}");
+						if (isObd)
+						{
+							var document = ThingExchangeHelper.CreatePortableDocument(thingType, loader, options);
+							ThingExchangeHelper.WriteObd(outputPath, document, options);
+						}
+						else if (isJson)
+						{
+							var document = ThingExchangeHelper.CreatePortableDocument(thingType, loader, options);
+							ThingExchangeHelper.WriteNyxThingJson(outputPath, document);
+						}
+						else
+						{
+							WriteThingSpritesheetExport(spriteSource, thingType, outputPath, formatLower);
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Failed to export things: {ex.Message}");
+			}
 		}
 	}
 }

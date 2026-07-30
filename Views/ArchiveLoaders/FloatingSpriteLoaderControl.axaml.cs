@@ -293,8 +293,21 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 				return;
 
 			var topLevel = TopLevel.GetTopLevel(this);
-			if (topLevel == null)
+			var window = topLevel as Window ?? this.VisualRoot as Window;
+			if (window == null)
 				return;
+
+			if (e.Format == "export_popup")
+			{
+				string defaultName = "sprite";
+				var dialog = new AssetExportDialog(defaultName, showThingsFormats: false);
+				await dialog.ShowDialog(window);
+				if (dialog.IsConfirmed)
+				{
+					PerformSpriteExport(vm, e.Sprites, dialog.ExportName, dialog.ExportPath, dialog.ExportFormat);
+				}
+				return;
+			}
 
 			if (string.IsNullOrEmpty(e.Format))
 			{
@@ -302,7 +315,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					? $"Import Sprite #{e.Sprite.Id}"
 					: $"Import Image to {e.Sprites.Count} Sprites";
 
-				var file = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+				var file = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
 				{
 					Title = title,
 					AllowMultiple = false,
@@ -341,7 +354,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					_ => (new[] { new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } } }, "Export Sprite as PNG"),
 				};
 
-				var saveFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+				var saveFile = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
 				{
 					Title = title,
 					DefaultExtension = extension,
@@ -364,7 +377,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 				return;
 			}
 
-			var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+			var folder = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
 			{
 				Title = $"Export {e.Sprites.Count} Sprites as {extension.ToUpperInvariant().TrimStart('.')}",
 				AllowMultiple = false
@@ -399,8 +412,6 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 				try
 				{
 					bitmap.InstallPixels(info, pin.AddrOfPinnedObject(), info.RowBytes);
-					using var image = SkiaSharp.SKImage.FromBitmap(bitmap);
-					if (image == null) return;
 
 					SkiaSharp.SKEncodedImageFormat encodedFormat = format.ToLowerInvariant() switch
 					{
@@ -409,11 +420,20 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 						_ => SkiaSharp.SKEncodedImageFormat.Png,
 					};
 
-					using var data = image.Encode(encodedFormat, 100);
-					if (data == null) return;
-
-					using var stream = File.OpenWrite(outputPath);
-					data.SaveTo(stream);
+					if (encodedFormat == SkiaSharp.SKEncodedImageFormat.Bmp)
+					{
+						using var stream = File.Create(outputPath);
+						NyxAssets.Utils.SpriteImageExporter.WriteOpaque24BitBmp(pixels, (int)edge, (int)edge, stream);
+					}
+					else
+					{
+						using var image = SkiaSharp.SKImage.FromBitmap(bitmap);
+						if (image == null) return;
+						using var data = image.Encode(encodedFormat, 100);
+						if (data == null) return;
+						using var stream = File.Create(outputPath);
+						data.SaveTo(stream);
+					}
 				}
 				finally
 				{
@@ -463,6 +483,47 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					e.DragEffects = DragDropEffects.Copy;
 					e.Handled = true;
 				}
+			}
+		}
+
+		private static void PerformSpriteExport(
+			FloatingSpriteLoaderViewModel vm,
+			IReadOnlyList<SpriteViewModel> sprites,
+			string name,
+			string folderPath,
+			string format)
+		{
+			if (sprites.Count == 0)
+				return;
+
+			var formatLower = format.ToLowerInvariant();
+			var extension = formatLower is "jpg" or "jpeg" ? ".jpg" : formatLower == "bmp" ? ".bmp" : ".png";
+
+			try
+			{
+				if (!Directory.Exists(folderPath))
+				{
+					Directory.CreateDirectory(folderPath);
+				}
+
+				if (sprites.Count == 1)
+				{
+					var sprite = sprites[0];
+					var outputPath = Path.Combine(folderPath, $"{name}_{sprite.Id}{extension}");
+					WriteSpriteExport(sprite.GetPixels(), outputPath, formatLower);
+				}
+				else
+				{
+					foreach (var sprite in sprites)
+					{
+						var outputPath = Path.Combine(folderPath, $"{name}_{sprite.Id}{extension}");
+						WriteSpriteExport(sprite.GetPixels(), outputPath, formatLower);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Failed to export sprites: {ex.Message}");
 			}
 		}
 	}
