@@ -1,0 +1,873 @@
+# Master custom flag definitions for things.json format.
+# Standard DAT properties and TFS items.xml attributes defined with accurate types and groups.
+# All default schema flags are locked by default. Edit this file or create a local flags_custom_override.toml to change.
+
+# --- Text & Metadata ---
+[flag.name]
+label = "Name"
+type = "string"
+group = "metadata"
+locked = true
+
+[flag.article]
+label = "Article"
+type = "string"
+group = "metadata"
+locked = true
+
+[flag.description]
+label = "Description"
+type = "string"
+group = "metadata"
+locked = true
+
+[flag.plural]
+label = "Plural Name"
+type = "string"
+group = "metadata"
+locked = true
+
+[flag.runespellname]
+label = "Rune Spell Name"
+type = "string"
+group = "metadata"
+locked = true
+
+[groups.metadata]
+label = "Metadata"
+order = 1
+
+# --- Classification & Equipment Types ---
+[flag.isContainer]
+label = "Container"
+type = "bool"
+group = "classification"
+locked = true
+
+[flag.isFluidContainer]
+label = "Fluid Container"
+type = "bool"
+group = "classification"
+locked = true
+
+[flag.isFluid]
+label = "Fluid"
+type = "bool"
+group = "classification"
+locked = true
+
+[flag.type]
+label = "Item Type"
+type = "enum"
+options = ["key", "magicfield", "container", "depot", "mailbox", "trashholder", "teleport", "door", "bed", "rune"]
+group = "classification"
+locked = true
+
+[flag.fluidsource]
+label = "Fluid Source"
+type = "enum"
+options = ["water", "blood", "beer", "slime", "lemonade", "milk", "mana", "life", "oil", "urine", "coconut", "wine", "mud", "fruitjuice", "lava", "rum", "swamp", "tea", "mead"]
+group = "classification"
+locked = true
+
+[flag.corpsetype]
+label = "Corpse Type"
+type = "enum"
+options = ["venom", "blood", "undead", "fire", "energy"]
+group = "classification"
+locked = true
+
+[flag.weapontype]
+label = "Weapon Type"
+type = "enum"
+options = ["sword", "club", "axe", "shield", "distance", "wand", "ammunition"]
+group = "classification"
+locked = true
+
+[flag.slottype]
+label = "Slot Type"
+type = "enum"
+options = ["head", "necklace", "backpack", "armor", "right-hand", "left-hand", "two-handed", "legs", "feet", "ring", "ammo"]
+group = "classification"
+locked = true
+
+[flag.slot]
+label = "Slot Type"
+type = "enum"
+options = ["head", "necklace", "backpack", "armor", "right-hand", "left-hand", "two-handed", "legs", "feet", "ring", "ammo"]
+group = "classification"
+locked = true
+
+[flag.ammotype]
+label = "Ammo Type"
+type = "string"
+group = "classification"
+locked = true
+
+[flag.shoottype]
+label = "Shoot / Distance Effect"
+type = "string"
+group = "classification"
+locked = true
+
+[flag.effect]
+label = "Magic Effect"
+type = "string"
+group = "classification"
+locked = true
+
+# Magic Field Properties (Special Sub-Window)
+[flag."field.value"]
+label = "Field Value / Type"
+type = "enum"
+options = ["fire", "poison", "energy", "drown"]
+group = "field_properties"
+locked = true
+
+[flag."field.count"]
+label = "Field Damage Count"
+type = "int"
+group = "field_properties"
+locked = true
+
+[flag."field.damage"]
+label = "Field Periodic Damage"
+type = "int"
+group = "field_properties"
+locked = true
+
+[flag."field.initdamage"]
+label = "Field Initial Damage"
+type = "int"
+group = "field_properties"
+locked = true
+
+[flag."field.start"]
+label = "Field Start Ticks"
+type = "int"
+group = "field_properties"
+locked = true
+
+[flag."field.ticks"]
+label = "Field Tick Interval (ms)"
+type = "int"
+group = "field_properties"
+locked = true
+
+[groups.classification]
+label = "Classification & Types"
+order = 2
+
+# --- Combat & Stats (items.xml) ---
+[flag.armor]
+label = "Armor"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.defense]
+label = "Defense"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.extradef]
+label = "Extra Defense"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.attack]
+label = "Attack"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.attackspeed]
+label = "Attack Speed (ms)"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.weight]
+label = "Weight (cap)"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.worth]
+label = "Worth (value)"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.range]
+label = "Range"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.hitchance]
+label = "Hit Chance (%)"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.maxhitchance]
+label = "Max Hit Chance (%)"
+type = "int"
+group = "stats"
+locked = true
+
+[flag.speed]
+label = "Speed Modifier"
+type = "int"
+group = "stats"
+locked = true
+
+# Health & Mana (Special Sub-Window)
+[flag.healthgain]
+label = "Health Gain"
+type = "int"
+group = "health_mana"
+locked = true
+
+[flag.healthticks]
+label = "Health Ticks (ms)"
+type = "int"
+group = "health_mana"
+locked = true
+
+[flag.managain]
+label = "Mana Gain"
+type = "int"
+group = "health_mana"
+locked = true
+
+[flag.manaticks]
+label = "Mana Ticks (ms)"
+type = "int"
+group = "health_mana"
+locked = true
+
+[flag.manashield]
+label = "Mana Shield (Utamo)"
+type = "bool"
+group = "health_mana"
+locked = true
+
+# Critical & Leech (Special Sub-Window)
+[flag.criticalhitchance]
+label = "Critical Hit Chance (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+[flag.criticalhitamount]
+label = "Critical Hit Amount (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+[flag.lifeleechchance]
+label = "Life Leech Chance (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+[flag.lifeleechamount]
+label = "Life Leech Amount (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+[flag.manaleechchance]
+label = "Mana Leech Chance (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+[flag.manaleechamount]
+label = "Mana Leech Amount (%)"
+type = "int"
+group = "special_leech"
+locked = true
+
+# Skill Boosts (Special Sub-Window)
+[flag.skillsword]
+label = "Skill Sword"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skillaxe]
+label = "Skill Axe"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skillclub]
+label = "Skill Club"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skilldist]
+label = "Skill Distance"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skillshield]
+label = "Skill Shield"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skillfish]
+label = "Skill Fishing"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.skillfist]
+label = "Skill Fist"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.magicpoints]
+label = "Magic Level Boost"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.maxhitpoints]
+label = "Max HP Boost"
+type = "int"
+group = "skills_boost"
+locked = true
+
+[flag.maxmanapoints]
+label = "Max Mana Boost"
+type = "int"
+group = "skills_boost"
+locked = true
+
+# Element Damage (Special Sub-Window)
+[flag.elementfire]
+label = "Element Fire Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+[flag.elementice]
+label = "Element Ice Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+[flag.elementearth]
+label = "Element Earth Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+[flag.elementenergy]
+label = "Element Energy Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+[flag.elementdeath]
+label = "Element Death Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+[flag.elementholy]
+label = "Element Holy Damage"
+type = "int"
+group = "elements_damage"
+locked = true
+
+# Protections & Absorbs (Special Sub-Window)
+[flag.absorbpercentall]
+label = "Absorb All Elements (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentallelements]
+label = "Absorb All Elements (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentelements]
+label = "Absorb Elements (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentphysical]
+label = "Absorb Physical (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentfire]
+label = "Absorb Fire (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentenergy]
+label = "Absorb Energy (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentice]
+label = "Absorb Ice (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentpoison]
+label = "Absorb Poison (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentearth]
+label = "Absorb Earth (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentdeath]
+label = "Absorb Death (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentholy]
+label = "Absorb Holy (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentmagic]
+label = "Absorb Magic (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentlifedrain]
+label = "Absorb Life Drain (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentmanadrain]
+label = "Absorb Mana Drain (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercentdrown]
+label = "Absorb Drown (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.absorbpercenthealing]
+label = "Absorb Healing (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+# Field Absorbs
+[flag.fieldabsorbpercentenergy]
+label = "Field Absorb Energy (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.fieldabsorbpercentfire]
+label = "Field Absorb Fire (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.fieldabsorbpercentpoison]
+label = "Field Absorb Poison (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+[flag.fieldabsorbpercentearth]
+label = "Field Absorb Earth (%)"
+type = "int"
+group = "absorbs_protection"
+locked = true
+
+# Condition Suppressions (Special Sub-Window)
+[flag.suppressdrunk]
+label = "Suppress Drunk (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressenergy]
+label = "Suppress Energy (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressfire]
+label = "Suppress Fire (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppresspoison]
+label = "Suppress Poison (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressdrown]
+label = "Suppress Drown (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressphysical]
+label = "Suppress Physical (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressfreeze]
+label = "Suppress Freeze (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppressdazzle]
+label = "Suppress Dazzle (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[flag.suppresscurse]
+label = "Suppress Curse (%)"
+type = "int"
+group = "suppressions_condition"
+locked = true
+
+[groups.stats]
+label = "Combat & Item Stats"
+order = 3
+
+# --- Item Usage & Movement ---
+[flag.pickupable]
+label = "Pickupable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.usable]
+label = "Usable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.forceUse]
+label = "Force Use"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.multiUse]
+label = "Multi Use"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.rotatable]
+label = "Rotatable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.hangable]
+label = "Hangable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.wrappable]
+label = "Wrappable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.unwrappable]
+label = "Unwrappable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.containersize]
+label = "Container Size"
+type = "int"
+parent = "isContainer"
+group = "interaction"
+locked = true
+
+[flag.max-slots]
+label = "Max Slots"
+type = "int"
+parent = "isContainer"
+group = "interaction"
+locked = true
+
+[flag.decayto]
+label = "Decay To (Item ID)"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.duration]
+label = "Duration (sec)"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.stopduration]
+label = "Stop Duration On Move"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.showduration]
+label = "Show Duration"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.charges]
+label = "Charges"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.showcharges]
+label = "Show Charges"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.showattributes]
+label = "Show Attributes"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.showcount]
+label = "Show Count"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.forceserialize]
+label = "Force Save/Serialize"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.writeable]
+label = "Writeable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.readable]
+label = "Readable"
+type = "bool"
+group = "interaction"
+locked = true
+
+[flag.maxtextlen]
+label = "Max Text Length"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.writeonceitemid]
+label = "Write Once Item ID"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.transformto]
+label = "Transform To (Item ID)"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.destroyto]
+label = "Destroy To (Item ID)"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.transformequipto]
+label = "Transform Equip To"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.transformdeequipto]
+label = "Transform De-equip To"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.maletransformto]
+label = "Male Transform To"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.femaletransformto]
+label = "Female Transform To"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.rotateto]
+label = "Rotate To (Item ID)"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.leveldoor]
+label = "Level Door Min Level"
+type = "int"
+group = "interaction"
+locked = true
+
+[flag.storeitem]
+label = "Store Item"
+type = "bool"
+group = "interaction"
+locked = true
+
+[groups.interaction]
+label = "Usage & Interaction"
+order = 4
+
+# --- Physics & Collision ---
+[flag.isUnpassable]
+label = "Unpassable"
+type = "bool"
+group = "physics"
+locked = true
+
+[flag.isUnmoveable]
+label = "Unmoveable"
+type = "bool"
+group = "physics"
+locked = true
+
+[flag.blockMissile]
+label = "Block Missile"
+type = "bool"
+group = "physics"
+locked = true
+
+[flag.blockPathfind]
+label = "Block Pathfinder"
+type = "bool"
+group = "physics"
+locked = true
+
+[flag.blocking]
+label = "Blocking"
+type = "bool"
+group = "physics"
+locked = true
+
+[flag.floorchange]
+label = "Floor Change"
+type = "enum"
+options = ["down", "north", "south", "southalt", "west", "east", "eastalt"]
+group = "physics"
+locked = true
+
+[groups.physics]
+label = "Physics & Collision"
+order = 5
+
+# --- Rendering & Visual Hooks ---
+[flag.isHorizontal]
+label = "Hook East"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.isVertical]
+label = "Hook South"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.dontHide]
+label = "Don't Hide"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.isTranslucent]
+label = "Translucent"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.isLyingObject]
+label = "Lying Object"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.isFullGround]
+label = "Full Ground"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.noMoveAnimation]
+label = "No Move Animation"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.ignoreLook]
+label = "Ignore Look"
+type = "bool"
+group = "rendering"
+locked = true
+
+[flag.bottomEffect]
+label = "Top Effect"
+type = "bool"
+group = "rendering"
+locked = true
+
+[groups.rendering]
+label = "Rendering & Placement"
+order = 6
