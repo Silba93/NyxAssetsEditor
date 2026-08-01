@@ -1,70 +1,52 @@
 > [!NOTE]
 > **Disclaimer:** Currently this project has **no license**. Please note that "no license" does not mean it is open-source; it means the code is private property and fully mine. As per GitHub's Terms of Service, I, Tofame, retain 100% of my undisputed rights to this repository. In the future there might be added a license which allows for great freedom of usage, however for now, I do not wish to ponder over which one would be good.
 
-# Nyx Assets Editor
+# Nyx Assets Editor Documentation Index
 
-Desktop editor for Nyx sprite archives (`.spr` / `.assets`) and things catalogs (`.dat` / `.things`), built with **Avalonia 12** and **NyxAssets 0.2+**.
+Welcome to the **Nyx Assets Editor** documentation suite. Nyx Assets Editor is a high-performance desktop application for viewing, editing, converting, and exporting sprite archives (`.spr` / `.assets`) and thing catalogs (`.dat` / `.things`), built with **Avalonia 12** and **NyxAssets 0.2+**.
 
-## Quick start
+---
+
+## 📚 Documentation Map
+
+| Guide / Reference | Audience | Description |
+| :--- | :--- | :--- |
+| 📖 **[User Guide](user-guide.md)** | **Users / Creators** | Complete user manual covering archive viewers, Thing Editor, Thing Finder, Looktype Generator, and Web Export. |
+| 🏗️ **[Architecture Overview](architecture.md)** | **Developers** | High-level system architecture, service graph, canvas docking engine, and persistence models. |
+| 🧩 **[Project Structure & MVVM](structure.md)** | **Developers** | Detailed breakdown of folder layouts, View ↔ ViewModel resolution, Locator mechanics, and code-behind rules. |
+| ⚡ **[Avalonia Performance](avalonia-performance.md)** | **Developers** | UI rendering optimization strategies, compiled bindings, lazy previews, and list virtualization. |
+| 🚩 **[DAT Protocols & Flags](dat_protocols.md)** | **Devs & Modders** | Client protocol versions map (V1–V6), flag configuration schema, and custom `flags_override.toml` setup. |
+| 📦 **[Exchange Formats](exchange-formats.md)** | **Devs & Modders** | Specification for `.nyx-thing`, `.obd`, legacy `.spr`/`.dat`, and modern `.assets`/`.things` packages. |
+| 💻 **[Developer Guide](developer-guide.md)** | **Contributors** | Build environment setup, asset resolution, project conventions, and adding new screens/features. |
+
+---
+
+## ⚡ Quick Start
+
+### Build & Run
 
 ```bash
+# Build & Run the desktop editor (.NET 10 SDK required)
 dotnet run --project NyxAssetsEditor.csproj
 ```
 
+### Basic Workflow
+
 1. Open **Assets** from the top navigation bar.
-2. Load a sprite archive in a **Sprite Archive Viewer** panel.
-3. Load a matching things archive in a **Things Archive Viewer** panel (`.dat` pairs with `.spr`, `.things` pairs with `.assets`).
-4. Use section tabs (Items / Outfits / Effects / Missiles) to browse things.
-5. Use **Find Thing** or press **Ctrl+F** in a Things Viewer to filter the selected kind. The filter form mirrors the Thing Editor's multi-edit controls: check a field to enable its filter, then set its value. Finder results support the same page-size choices and grid/list layouts as Things Viewer.
-6. Open **Looktype Generator** from the Assets toolbar to create and preview an appearance, or edit/copy its live-detected Lua/XML.
+2. Load a sprite archive in a **Sprite Archive Viewer** panel (`.spr` or `.assets`).
+3. Load a matching thing catalog in a **Things Archive Viewer** panel (`.dat` or `.things`).
+4. Select tabs (**Items**, **Outfits**, **Effects**, **Missiles**) to filter catalog kinds.
+5. Double-click any item or sprite to launch its floating editor.
+6. Open **Looktype Generator** from the toolbar to compose appearances and export Lua/XML outfits.
+7. Open **Assets → Web Export** to extract and optimize sprites with [oxipng](https://github.com/oxipng/oxipng).
 
-For `.spr` / `.dat` pairs, each loader can read `extended`, `transparency`, `frame-durations`, and `frame-groups` from a same-named `.otfi` file. Select **Prefer settings from .otfi** in the loading settings; missing or incomplete files automatically fall back to the recommended settings detected from the archive version.
+---
 
-## Documentation
+## 🛠️ Requirements & Dependencies
 
-| Document | Description |
-|----------|-------------|
-| **[structure.md](structure.md)** | **MVVM layers, View/ViewModel pairing, folder map, code-behind rules** |
-| [architecture.md](architecture.md) | Workspace pairing, things sections, persistence |
-| [avalonia-performance.md](avalonia-performance.md) | UI performance practices applied in this app |
-
-## Dependencies
-
-- [Avalonia](https://avaloniaui.net/) 12 — cross-platform UI
-- [NyxAssets](https://www.nuget.org/packages/NyxAssets) — archive I/O, thing exchange, previews
-- [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) — view models
-- [SkiaSharp](https://github.com/mono/SkiaSharp) — image processing
-
-### Optional: OxiPNG (Web Export)
-
-**Assets → Web Export** can re-compress exported PNGs with [oxipng](https://github.com/oxipng/oxipng). The binary must be on your `PATH`. Without it, export still writes PNGs; optimization is skipped with a warning.
-
-Install (pick one):
-
-```bash
-# Cargo (Rust toolchain)
-cargo install oxipng
-
-# Windows (Scoop)
-scoop install oxipng
-
-# macOS (Homebrew)
-brew install oxipng
-```
-
-Or download a release from [oxipng releases](https://github.com/oxipng/oxipng/releases) and add the folder to `PATH`.
-
-Web Export options (PNG only):
-
-| Option | Flag | Notes |
-|--------|------|--------|
-| Optimize PNGs with OxiPNG | `-o 3 --strip safe` | Default mid effort |
-| OxiPNG max | `-o max` | Slower, usually smaller. Mutually exclusive with Zopfli |
-| Zopfli | `-o 3 --zopfli` | Slowest; often smallest. Mutually exclusive with max. Uses oxipng's built-in Zopfli — no separate `zopflipng` install |
-
-Neither extra option → default `-o 3`.
-
-## Releasing a New Version
-
-* **Local Builds**: Manually increment `<Version>` and `<AssemblyVersion>` in `NyxAssetsEditor.csproj` before running `make publish`.
-* **CI/CD Releases**: Manually trigger the **Build and Release** workflow on GitHub Actions. You can specify a version (e.g., `1.0.1`) or leave it empty to automatically increment the patch version of the latest tag.
+- **Runtime & SDK**: [.NET 10 SDK](https://dotnet.microsoft.com/)
+- **UI Framework**: [Avalonia 12](https://avaloniaui.net/)
+- **Core Engine**: [NyxAssets](https://www.nuget.org/packages/NyxAssets)
+- **MVVM Framework**: [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/)
+- **Graphics Pipeline**: [SkiaSharp](https://github.com/mono/SkiaSharp)
+- **Optional Optimizer**: [OxiPNG](https://github.com/oxipng/oxipng) (required for optimized Web Export)
