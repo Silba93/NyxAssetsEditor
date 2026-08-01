@@ -575,6 +575,9 @@ public partial class ConverterViewModel : ViewModelBase
 							var idleFg = thing.FrameGroups.Find(g => g.GroupTypeId == 0) ?? thing.FrameGroups[0];
 							var walkFg = thing.FrameGroups.Find(g => g.GroupTypeId == 1) ?? (thing.FrameGroups.Count > 1 ? thing.FrameGroups[1] : idleFg);
 
+							// For pre-mount target versions (e.g. 8.60), truncate PatternZ to 1 to keep base outfit sprites and drop mounts.
+							var targetPatternZ = 1u;
+
 							var mergedFrames = idleFg.Frames + (walkFg != idleFg ? walkFg.Frames : 0);
 							var mergedFg = new ThingFrameGroup
 							{
@@ -585,7 +588,7 @@ public partial class ConverterViewModel : ViewModelBase
 								Layers = idleFg.Layers,
 								PatternX = idleFg.PatternX,
 								PatternY = idleFg.PatternY,
-								PatternZ = idleFg.PatternZ,
+								PatternZ = targetPatternZ,
 								Frames = mergedFrames,
 								IsAnimation = mergedFrames > 1
 							};
@@ -599,17 +602,26 @@ public partial class ConverterViewModel : ViewModelBase
 							for (uint py = 0; py < mergedFg.PatternY; py++)
 							for (uint pz = 0; pz < mergedFg.PatternZ; pz++)
 							{
+								var idlePz = Math.Min(pz, idleFg.PatternZ - 1);
+								var walkPz = Math.Min(pz, walkFg.PatternZ - 1);
+
 								// Copy idle frames (frame 0)
-								var idleSrcIndex = idleFg.GetSpriteIndex(w, h, l, px, py, pz, 0);
+								var idleSrcIndex = idleFg.GetSpriteIndex(w, h, l, px, py, idlePz, 0);
 								var idleDstIndex = mergedFg.GetSpriteIndex(w, h, l, px, py, pz, 0);
 								mergedFg.SpriteIds[idleDstIndex] = idleFg.SpriteIds[idleSrcIndex];
 
 								// Copy walking frames
 								if (walkFg != idleFg)
 								{
+									var walkW = Math.Min(w, walkFg.Width - 1);
+									var walkH = Math.Min(h, walkFg.Height - 1);
+									var walkL = Math.Min(l, walkFg.Layers - 1);
+									var walkPx = Math.Min(px, walkFg.PatternX - 1);
+									var walkPy = Math.Min(py, walkFg.PatternY - 1);
+
 									for (uint f = 0; f < walkFg.Frames; f++)
 									{
-										var walkSrcIndex = walkFg.GetSpriteIndex(w, h, l, px, py, pz, f);
+										var walkSrcIndex = walkFg.GetSpriteIndex(walkW, walkH, walkL, walkPx, walkPy, walkPz, f);
 										var walkDstIndex = mergedFg.GetSpriteIndex(w, h, l, px, py, pz, f + 1);
 										mergedFg.SpriteIds[walkDstIndex] = walkFg.SpriteIds[walkSrcIndex];
 									}
@@ -618,6 +630,82 @@ public partial class ConverterViewModel : ViewModelBase
 
 							thing.FrameGroups.Clear();
 							thing.FrameGroups.Add(mergedFg);
+						}
+						else if (thing.FrameGroups.Count == 1 && thing.FrameGroups[0].PatternZ > 1)
+						{
+							// Single framegroup outfit with PatternZ > 1 (e.g. mounts in 10.98): truncate PatternZ to 1
+							var srcFg = thing.FrameGroups[0];
+							var truncFg = new ThingFrameGroup
+							{
+								GroupTypeId = srcFg.GroupTypeId,
+								Width = srcFg.Width,
+								Height = srcFg.Height,
+								ExactSize = srcFg.ExactSize,
+								Layers = srcFg.Layers,
+								PatternX = srcFg.PatternX,
+								PatternY = srcFg.PatternY,
+								PatternZ = 1,
+								Frames = srcFg.Frames,
+								IsAnimation = srcFg.IsAnimation,
+								FrameTimings = srcFg.FrameTimings
+							};
+							truncFg.SpriteIds = new uint[truncFg.GetTotalSpriteSlots()];
+							for (uint w = 0; w < truncFg.Width; w++)
+							for (uint h = 0; h < truncFg.Height; h++)
+							for (uint l = 0; l < truncFg.Layers; l++)
+							for (uint px = 0; px < truncFg.PatternX; px++)
+							for (uint py = 0; py < truncFg.PatternY; py++)
+							for (uint f = 0; f < truncFg.Frames; f++)
+							{
+								var srcIndex = srcFg.GetSpriteIndex(w, h, l, px, py, 0, f);
+								var dstIndex = truncFg.GetSpriteIndex(w, h, l, px, py, 0, f);
+								truncFg.SpriteIds[dstIndex] = srcFg.SpriteIds[srcIndex];
+							}
+							thing.FrameGroups[0] = truncFg;
+						}
+					}
+				}
+				else
+				{
+					// Clean up PatternZ for pre-mount target versions even if outfit frame group option setting matches
+					if (tgtVerVal <= 860)
+					{
+						foreach (var thing in catalog.EnumerateOutfits())
+						{
+							foreach (var fg in thing.FrameGroups)
+							{
+								if (fg.PatternZ > 1)
+								{
+									var truncFg = new ThingFrameGroup
+									{
+										GroupTypeId = fg.GroupTypeId,
+										Width = fg.Width,
+										Height = fg.Height,
+										ExactSize = fg.ExactSize,
+										Layers = fg.Layers,
+										PatternX = fg.PatternX,
+										PatternY = fg.PatternY,
+										PatternZ = 1,
+										Frames = fg.Frames,
+										IsAnimation = fg.IsAnimation,
+										FrameTimings = fg.FrameTimings
+									};
+									truncFg.SpriteIds = new uint[truncFg.GetTotalSpriteSlots()];
+									for (uint w = 0; w < truncFg.Width; w++)
+									for (uint h = 0; h < truncFg.Height; h++)
+									for (uint l = 0; l < truncFg.Layers; l++)
+									for (uint px = 0; px < truncFg.PatternX; px++)
+									for (uint py = 0; py < truncFg.PatternY; py++)
+									for (uint f = 0; f < truncFg.Frames; f++)
+									{
+										var srcIndex = fg.GetSpriteIndex(w, h, l, px, py, 0, f);
+										var dstIndex = truncFg.GetSpriteIndex(w, h, l, px, py, 0, f);
+										truncFg.SpriteIds[dstIndex] = fg.SpriteIds[srcIndex];
+									}
+									var idx = thing.FrameGroups.IndexOf(fg);
+									if (idx >= 0) thing.FrameGroups[idx] = truncFg;
+								}
+							}
 						}
 					}
 				}
@@ -665,7 +753,7 @@ public partial class ConverterViewModel : ViewModelBase
 		}
 		catch (Exception ex)
 		{
-			StatusText = $"Migration Error: {ex.Message}";
+			StatusText = $"Migration Error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}";
 		}
 		finally
 		{
