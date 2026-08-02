@@ -248,6 +248,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
+		[RelayCommand]
+		public void DismissError()
+		{
+			ErrorMessage = null;
+		}
+
 		private bool _isGridView = true;
 
 		public bool IsGridView

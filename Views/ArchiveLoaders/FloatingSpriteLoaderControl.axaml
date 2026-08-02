@@ -247,7 +247,12 @@
 				</StackPanel>
 				<Border IsVisible="{Binding HasError}" VerticalAlignment="Top" Margin="8" Padding="8,5"
 						Background="#CC4A3518" BorderBrush="#D99A3E" BorderThickness="1" CornerRadius="4" ZIndex="20">
-					<TextBlock Text="{Binding ErrorMessage}" Foreground="#FFD18A" FontSize="11" TextWrapping="Wrap"/>
+					<Grid ColumnDefinitions="*,Auto">
+						<TextBlock Grid.Column="0" Text="{Binding ErrorMessage}" Foreground="#FFD18A" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
+						<Button Grid.Column="1" Command="{Binding DismissErrorCommand}" ToolTip.Tip="Dismiss" Background="Transparent" BorderThickness="0" Padding="4,2" Margin="6,0,0,0" VerticalAlignment="Center" Cursor="Hand">
+							<TextBlock Text="✕" Foreground="#FFD18A" FontSize="12" FontWeight="Bold"/>
+						</Button>
+					</Grid>
 				</Border>
 			</Grid>
 
