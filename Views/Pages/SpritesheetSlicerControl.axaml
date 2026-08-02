@@ -106,22 +106,6 @@
 					<TextBlock Text="Thing creation and replacement" FontSize="15" FontWeight="SemiBold"/>
 					<TextBlock Text="Build things from the live grid selection." Foreground="#888888" TextWrapping="Wrap" FontSize="11"/>
 					<ComboBox ItemsSource="{Binding ThingKinds}" SelectedItem="{Binding SelectedKind}"/>
-					<CheckBox Content="Replace an existing thing" IsChecked="{Binding ReplaceExisting}"/>
-					<StackPanel IsVisible="{Binding ReplaceExisting}" Spacing="5">
-						<Grid ColumnDefinitions="*,Auto" ColumnSpacing="5">
-							<NumericUpDown Value="{Binding ReplacementThingId}" Minimum="0" Maximum="4294967295" FormatString="0"/>
-							<Button Grid.Column="1" Width="30" Height="28" Padding="7" Command="{Binding FindReplacementCommand}" ToolTip.Tip="Find a thing to replace">
-								<Image Source="/Assets/Icons/action_search.png" Width="12" Height="12"/>
-							</Button>
-						</Grid>
-						<Border Background="#1E1E1E" BorderBrush="#353535" BorderThickness="1" CornerRadius="4" Padding="6">
-							<Grid ColumnDefinitions="48,*" ColumnSpacing="8">
-								<Border Width="44" Height="44" Background="#555555"><Image Source="{Binding ReplacementPreview}" Stretch="Uniform"/></Border>
-								<TextBlock Grid.Column="1" Text="{Binding ReplacementSelectionLabel}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-							</Grid>
-						</Border>
-						<TextBlock Text="Imports new sprites; old sprite IDs are retained in storage." Foreground="#E3BE75" FontSize="10" TextWrapping="Wrap"/>
-					</StackPanel>
 					<CheckBox Content="Use an existing thing as template" IsChecked="{Binding UseTemplate}" IsVisible="{Binding IsCreateMode}"/>
 					<StackPanel IsVisible="{Binding ShowTemplatePicker}" Spacing="5">
 						<Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="5">
@@ -137,6 +121,22 @@
 								<TextBlock Grid.Column="1" Text="{Binding TemplateSelectionLabel}" VerticalAlignment="Center" TextWrapping="Wrap"/>
 							</Grid>
 						</Border>
+					</StackPanel>
+					<CheckBox Content="Replace an existing thing" IsChecked="{Binding ReplaceExisting}"/>
+					<StackPanel IsVisible="{Binding ReplaceExisting}" Spacing="5">
+						<Grid ColumnDefinitions="*,Auto" ColumnSpacing="5">
+							<NumericUpDown Value="{Binding ReplacementThingId}" Minimum="0" Maximum="4294967295" FormatString="0"/>
+							<Button Grid.Column="1" Width="30" Height="28" Padding="7" Command="{Binding FindReplacementCommand}" ToolTip.Tip="Find a thing to replace">
+								<Image Source="/Assets/Icons/action_search.png" Width="12" Height="12"/>
+							</Button>
+						</Grid>
+						<Border Background="#1E1E1E" BorderBrush="#353535" BorderThickness="1" CornerRadius="4" Padding="6">
+							<Grid ColumnDefinitions="48,*" ColumnSpacing="8">
+								<Border Width="44" Height="44" Background="#555555"><Image Source="{Binding ReplacementPreview}" Stretch="Uniform"/></Border>
+								<TextBlock Grid.Column="1" Text="{Binding ReplacementSelectionLabel}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+							</Grid>
+						</Border>
+						<TextBlock Text="Imports new sprites; old sprite IDs are retained in storage." Foreground="#E3BE75" FontSize="10" TextWrapping="Wrap"/>
 					</StackPanel>
 
 					<StackPanel Spacing="6" IsEnabled="{Binding !UsesCombinedLayout}">

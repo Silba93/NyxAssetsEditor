@@ -84,7 +84,7 @@ public partial class SpritesheetSlicerViewModel : PanelViewModelBase, IDisposabl
 	private int _outfitWalkingFrames = 2;
 	private uint _templateThingId;
 	private uint _replacementThingId;
-	private bool _useTemplate;
+	private bool _useTemplate = true;
 	private bool _replaceExisting;
 	private ThingKind _selectedKind = ThingKind.Item;
 	private string _statusMessage = "Open or drop an image to begin.";

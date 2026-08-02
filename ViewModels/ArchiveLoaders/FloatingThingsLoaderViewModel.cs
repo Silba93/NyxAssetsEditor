@@ -776,7 +776,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 				HasSavedChanges = true;
 				if (SelectedSection != kind) SelectedSection = kind;
-				else ReloadThingsForSection();
+				else ReloadThingsForSection(preserveCurrentPage: replaceExisting, goToLastPage: !replaceExisting);
 				spritePanel.CommitSlicerAppend(spriteCheckpoint);
 				EndThingTransaction(affected);
 				return things.Select(t => t.Id).ToList();
@@ -949,7 +949,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				yield return thing;
 		}
 
-		private void ReloadThingsForSection()
+		private void ReloadThingsForSection(bool preserveCurrentPage = false, bool goToLastPage = false)
 		{
 			_allThings.Clear();
 			foreach (var thing in EnumerateSelectedSection())
@@ -958,7 +958,18 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			TotalThings = (uint)_allThings.Count;
 			_selectionAnchor = null;
 			SelectedThing = null;
-			_currentPage = 1;
+			if (goToLastPage)
+			{
+				_currentPage = TotalPages;
+			}
+			else if (!preserveCurrentPage)
+			{
+				_currentPage = 1;
+			}
+			else if (_currentPage > TotalPages && TotalPages > 0)
+			{
+				_currentPage = TotalPages;
+			}
 			OnPropertyChanged(nameof(CurrentPage));
 			OnPropertyChanged(nameof(HasNextPage));
 			OnPropertyChanged(nameof(HasPreviousPage));
