@@ -986,7 +986,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 
 	public bool CanGenerateMissileOrthogonalDirections => GetMissileOrthogonalSourceDirection() != null;
 	public bool CanGenerateMissileDiagonalDirections => GetMissileDiagonalSourceDirection() != null;
-	public bool CanGenerateMissileAllDirections => GetMissileOrthogonalSourceDirection() != null;
+	public bool CanGenerateMissileAllDirections => GetMissileAnySingleSourceDirection() != null;
 
 	private bool DirectionHasSprites(ThingFrameGroup fg, uint px, uint py)
 	{
@@ -1042,6 +1042,29 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		return count == 1 ? source : null;
 	}
 
+	private Direction8? GetMissileAnySingleSourceDirection()
+	{
+		if (!IsMissile) return null;
+		var fg = CurrentFrameGroup;
+		Span<Direction8> allDirs = stackalloc Direction8[]
+		{
+			Direction8.North, Direction8.NorthEast, Direction8.East, Direction8.SouthEast,
+			Direction8.South, Direction8.SouthWest, Direction8.West, Direction8.NorthWest
+		};
+		Direction8? source = null;
+		int count = 0;
+		foreach (var dir in allDirs)
+		{
+			var (px, py) = MissileDirectionPatterns.GetPattern(dir);
+			if (DirectionHasSprites(fg, px, py))
+			{
+				count++;
+				source = dir;
+			}
+		}
+		return count == 1 ? source : null;
+	}
+
 	[RelayCommand(CanExecute = nameof(CanGenerateMissileOrthogonalDirections))]
 	private void GenerateMissileOrthogonalDirections()
 	{
@@ -1061,7 +1084,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	[RelayCommand(CanExecute = nameof(CanGenerateMissileAllDirections))]
 	private void GenerateMissileAllDirections()
 	{
-		var sourceDir = GetMissileOrthogonalSourceDirection();
+		var sourceDir = GetMissileAnySingleSourceDirection();
 		if (sourceDir == null) return;
 		GenerateMissileAllRotations(sourceDir.Value);
 	}
@@ -1207,13 +1230,18 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 			}
 			if (!hasContent) continue;
 
-			// Normalize cardinal source to North
+			// Normalize source direction (cardinal or diagonal) to North
 			byte[] northRgba = sourceDir switch
 			{
+				Direction8.North => (byte[])srcCellRgba.Clone(),
+				Direction8.NorthEast => RotSpriteAlgorithm(srcCellRgba, cellW, cellH, -45.0),
 				Direction8.East => RotateRgba90(srcCellRgba, cellW, cellH, 3),  // 270° CW = 90° CCW
+				Direction8.SouthEast => RotSpriteAlgorithm(srcCellRgba, cellW, cellH, -135.0),
 				Direction8.South => RotateRgba90(srcCellRgba, cellW, cellH, 2), // 180°
+				Direction8.SouthWest => RotSpriteAlgorithm(srcCellRgba, cellW, cellH, 135.0),
 				Direction8.West => RotateRgba90(srcCellRgba, cellW, cellH, 1),  // 90° CW
-				_ => (byte[])srcCellRgba.Clone(),                               // North
+				Direction8.NorthWest => RotSpriteAlgorithm(srcCellRgba, cellW, cellH, 45.0),
+				_ => (byte[])srcCellRgba.Clone(),
 			};
 
 			// Generate 8-way rotations using RotSprite + symmetrical flips
@@ -1419,17 +1447,42 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		int rotW = maxX - minX + 1;
 		int rotH = maxY - minY + 1;
 
-		// === Stage 5: Detect cutoff & shift towards transparent space on opposite edge ===
-		int startX = (padW - w) / 2;
-		int startY = (padH - h) / 2;
+		// === Stage 5: Directionally-aware bottom-right biased target alignment ===
+		double radDir = angleDegrees * Math.PI / 180.0;
+		double dirX = Math.Sin(radDir);
+		double dirY = -Math.Cos(radDir);
+
+		int preferredTargetX;
+		if (dirX > 0.3)
+			preferredTargetX = w - rotW;         // Right aligned (SouthEast, East, NorthEast)
+		else if (dirX < -0.3)
+			preferredTargetX = 0;                 // Left aligned (NorthWest, West, SouthWest)
+		else
+			preferredTargetX = (w - rotW) / 2;    // Centered (North, South)
+
+		int preferredTargetY;
+		if (dirY > 0.3)
+			preferredTargetY = h - rotH;         // Bottom aligned (SouthEast, South, SouthWest)
+		else if (dirY < -0.3)
+			preferredTargetY = 0;                 // Top aligned (NorthWest, North, NorthEast)
+		else
+			preferredTargetY = (h - rotH) / 2;    // Centered (East, West)
+
+		// Compute unshifted padded center coordinates
+		int centerStartX = (padW - w) / 2;
+		int centerStartY = (padH - h) / 2;
+
+		// Shift padded crop window so rotated pixels land at preferredTarget position without edge cutoff
+		int targetPadX = centerStartX + (preferredTargetX - ((w - rotW) / 2));
+		int targetPadY = centerStartY + (preferredTargetY - ((h - rotH) / 2));
 
 		int newStartX = (rotW <= w)
-			? Math.Clamp(startX, maxX - w + 1, minX)
-			: Math.Min(startX, minX);
+			? Math.Clamp(targetPadX, maxX - w + 1, minX)
+			: Math.Min(centerStartX, minX);
 
 		int newStartY = (rotH <= h)
-			? Math.Clamp(startY, maxY - h + 1, minY)
-			: Math.Min(startY, minY);
+			? Math.Clamp(targetPadY, maxY - h + 1, minY)
+			: Math.Min(centerStartY, minY);
 
 		// === Stage 6: Copy cropped/shifted region into final w × h canvas ===
 		byte[] result = new byte[w * h * 4];

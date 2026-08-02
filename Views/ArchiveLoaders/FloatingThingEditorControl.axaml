@@ -214,9 +214,9 @@
 									<Grid Margin="0,4,0,0">
 										<!-- Left: Missile generator buttons (bottom left of appearance section) -->
 										<StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Spacing="6" IsVisible="{Binding IsMissile}">
-											<Button Content="Generate 90° directions" Command="{Binding GenerateMissileOrthogonalDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first" FontSize="10" Padding="6,4"/>
-											<Button Content="Generate angled directions" Command="{Binding GenerateMissileDiagonalDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first" FontSize="10" Padding="6,4"/>
-											<Button Content="Generate all directions" Command="{Binding GenerateMissileAllDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first (N, E, S, W)" FontSize="10" Padding="6,4" BorderBrush="#FFD700" BorderThickness="1" Background="#2A2510" Foreground="#FFE082"/>
+											<Button Content="Generate 90° directions" Command="{Binding GenerateMissileOrthogonalDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first" ToolTip.ShowOnDisabled="True" FontSize="10" Padding="6,4"/>
+											<Button Content="Generate angled directions" Command="{Binding GenerateMissileDiagonalDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first" ToolTip.ShowOnDisabled="True" FontSize="10" Padding="6,4"/>
+											<Button Content="Generate all directions" Command="{Binding GenerateMissileAllDirectionsCommand}" ToolTip.Tip="Prepare 1 direction first" ToolTip.ShowOnDisabled="True" FontSize="10" Padding="6,4" BorderBrush="#FFD700" BorderThickness="1" Background="#2A2510" Foreground="#FFE082"/>
 										</StackPanel>
 
 										<!-- Right: Controls (OB-style) -->
