@@ -1533,6 +1533,11 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		double cosA = Math.Cos(rad);
 		double sinA = Math.Sin(rad);
 
+		ReadOnlySpan<(int dx, int dy)> cardinals = stackalloc (int, int)[]
+		{
+			(0, -1), (0, 1), (-1, 0), (1, 0)
+		};
+
 		for (int y = 1; y < h - 1; y++)
 		{
 			for (int x = 1; x < w - 1; x++)
@@ -1559,10 +1564,6 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 
 				int sameCount = 0;
 				int totalVisible = 0;
-				ReadOnlySpan<(int dx, int dy)> cardinals = stackalloc (int, int)[]
-				{
-					(0, -1), (0, 1), (-1, 0), (1, 0)
-				};
 
 				foreach (var (ddx, ddy) in cardinals)
 				{

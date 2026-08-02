@@ -99,7 +99,7 @@
 
 									<!-- Optional items.xml Merge -->
 									<TextBlock Grid.Row="3" Grid.Column="0" Text="items.xml (Optional):" VerticalAlignment="Center" Foreground="#CCCCCC" IsVisible="{Binding DatToThingsMode}"/>
-									<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ItemsXmlPath}" Watermark="Path to items.xml to merge attributes into properties..." Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" IsVisible="{Binding DatToThingsMode}"/>
+									<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ItemsXmlPath}" PlaceholderText="Path to items.xml to merge attributes into properties..." Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" IsVisible="{Binding DatToThingsMode}"/>
 									<Button Grid.Row="3" Grid.Column="2" Content="Browse..." Click="OnBrowseItemsXml" Padding="12,4" IsVisible="{Binding DatToThingsMode}"/>
 
 									<!-- Client Version -->
