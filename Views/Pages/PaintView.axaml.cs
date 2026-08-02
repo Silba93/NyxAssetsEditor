@@ -23,6 +23,8 @@ namespace NyxAssetsEditor.Views.Pages
 		private int _moveStartY = -1;
 		private List<byte[]>? _moveStartAllLayersPixels;
 		private bool[,]? _moveStartSelectionMask;
+		private double _rotateInitialMouseAngle = 0.0;
+		private double _rotateInitialAngle = 0.0;
 
 		public PaintView()
 		{
@@ -34,12 +36,14 @@ namespace NyxAssetsEditor.Views.Pages
 			var props = e.GetCurrentPoint(this).Properties;
 			if (!props.IsLeftButtonPressed)
 				return;
-			// Only start drawing when clicking directly on the canvas image
-			if (e.Source is Image img)
+			
+			Image? img = (e.Source as Image) ?? this.FindControl<Image>("CanvasImage");
+			if (img != null && img.Bounds.Width > 0 && img.Bounds.Height > 0)
 			{
 				var vm = DataContext as PaintViewModel;
 				if (vm != null)
 				{
+					e.Pointer.Capture(img);
 					vm.SaveHistoryState();
 					_isDrawing = true;
 
@@ -86,6 +90,17 @@ namespace NyxAssetsEditor.Views.Pages
 						_moveStartSelectionMask = new bool[vm.CanvasWidth, vm.CanvasHeight];
 						Array.Copy(vm.GetSelectionMask(), _moveStartSelectionMask, _moveStartSelectionMask.Length);
 					}
+					else if (vm.ActiveTool == PaintTool.Rotate)
+					{
+						var pos = e.GetPosition(img);
+						double curX = pos.X / img.Bounds.Width * vm.CanvasWidth;
+						double curY = pos.Y / img.Bounds.Height * vm.CanvasHeight;
+						double cx = vm.CanvasWidth / 2.0;
+						double cy = vm.CanvasHeight / 2.0;
+						_rotateInitialMouseAngle = Math.Atan2(curY - cy, curX - cx) * 180.0 / Math.PI;
+						_rotateInitialAngle = vm.RotationAngle;
+						vm.StartRotationDrag();
+					}
 					else
 					{
 						HandlePointer(e);
@@ -109,6 +124,10 @@ namespace NyxAssetsEditor.Views.Pages
 				{
 					HandleMoveDrag(e);
 				}
+				else if (vm?.ActiveTool == PaintTool.Rotate)
+				{
+					HandleRotateDrag(e);
+				}
 				else
 				{
 					HandlePointer(e);
@@ -117,8 +136,45 @@ namespace NyxAssetsEditor.Views.Pages
 			}
 		}
 
+		private void HandleRotateDrag(PointerEventArgs e)
+		{
+			var img = this.FindControl<Image>("CanvasImage");
+			var vm = DataContext as PaintViewModel;
+			if (img == null || vm == null || img.Bounds.Width <= 0 || img.Bounds.Height <= 0) return;
+
+			var pos = e.GetPosition(img);
+			double curX = pos.X / img.Bounds.Width * vm.CanvasWidth;
+			double curY = pos.Y / img.Bounds.Height * vm.CanvasHeight;
+
+			double cx = vm.CanvasWidth / 2.0;
+			double cy = vm.CanvasHeight / 2.0;
+
+			double currentMouseAngle = Math.Atan2(curY - cy, curX - cx) * 180.0 / Math.PI;
+			double angleDelta = currentMouseAngle - _rotateInitialMouseAngle;
+
+			double newAngle = _rotateInitialAngle + angleDelta;
+
+			// Normalize angle between -180 and 180 for clean display
+			newAngle = (newAngle + 180.0) % 360.0;
+			if (newAngle < 0) newAngle += 360.0;
+			newAngle -= 180.0;
+
+			if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+			{
+				newAngle = Math.Round(newAngle / 15.0) * 15.0;
+			}
+
+			vm.RotationAngle = Math.Round(newAngle, 1);
+		}
+
 		private void OnCanvasPointerReleased(object sender, PointerReleasedEventArgs e)
 		{
+			e.Pointer.Capture(null);
+			var vm = DataContext as PaintViewModel;
+			if (vm?.ActiveTool == PaintTool.Rotate)
+			{
+				vm.EndRotationDrag();
+			}
 			_isDrawing = false;
 			e.Handled = true;
 		}

@@ -27,7 +27,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		Bucket,
 		Wand,
 		Select,
-		Move
+		Move,
+		Rotate
 	}
 
 	public enum BrushShape
@@ -44,6 +45,13 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		AllLayers,
 		VisibleLayers,
 		TouchedLayer
+	}
+
+	public enum TransformTargetOption
+	{
+		ActiveLayer,
+		AllLayers,
+		VisibleLayers
 	}
 
 	public partial class LayerViewModel : ViewModelBase
@@ -153,13 +161,22 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			OnPropertyChanged(nameof(IsWandActive));
 			OnPropertyChanged(nameof(IsSelectActive));
 			OnPropertyChanged(nameof(IsMoveActive));
+			OnPropertyChanged(nameof(IsRotateActive));
 			OnPropertyChanged(nameof(IsThresholdVisible));
 			OnPropertyChanged(nameof(IsMoveToolSettingsVisible));
+			OnPropertyChanged(nameof(IsRotateToolSettingsVisible));
 			NotifyOutlinePropertiesChanged();
 		}
 
 		public bool IsThresholdVisible => ActiveTool == PaintTool.Bucket || ActiveTool == PaintTool.Wand;
 		public bool IsMoveToolSettingsVisible => ActiveTool == PaintTool.Move;
+		public bool IsRotateToolSettingsVisible => ActiveTool == PaintTool.Rotate;
+
+		public bool IsRotateActive
+		{
+			get => ActiveTool == PaintTool.Rotate;
+			set { if (value) ActiveTool = PaintTool.Rotate; }
+		}
 
 		public bool IsBrushActive
 		{
@@ -322,6 +339,34 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			UpdateCanvasPreview();
 			NotifyOutlinePropertiesChanged();
 			OnPropertyChanged(nameof(PositionText));
+		}
+
+		[ObservableProperty]
+		private TransformTargetOption _transformTarget = TransformTargetOption.ActiveLayer;
+
+		public bool IsTransformActiveTarget
+		{
+			get => TransformTarget == TransformTargetOption.ActiveLayer;
+			set { if (value) TransformTarget = TransformTargetOption.ActiveLayer; }
+		}
+
+		public bool IsTransformAllTarget
+		{
+			get => TransformTarget == TransformTargetOption.AllLayers;
+			set { if (value) TransformTarget = TransformTargetOption.AllLayers; }
+		}
+
+		public bool IsTransformVisibleTarget
+		{
+			get => TransformTarget == TransformTargetOption.VisibleLayers;
+			set { if (value) TransformTarget = TransformTargetOption.VisibleLayers; }
+		}
+
+		partial void OnTransformTargetChanged(TransformTargetOption value)
+		{
+			OnPropertyChanged(nameof(IsTransformActiveTarget));
+			OnPropertyChanged(nameof(IsTransformAllTarget));
+			OnPropertyChanged(nameof(IsTransformVisibleTarget));
 		}
 
 		[ObservableProperty]
@@ -1230,6 +1275,203 @@ namespace NyxAssetsEditor.ViewModels.Pages
 						SetPixel(pixels, x, targetY, temp);
 					}
 				}
+			}
+
+			UpdateCanvasPreview();
+		}
+
+		[ObservableProperty]
+		private double _rotationAngle = 0.0;
+
+		partial void OnRotationAngleChanged(double value)
+		{
+			ApplyRotationPreview(value);
+		}
+
+		[RelayCommand]
+		private void SetRotationAngle(string angleStr)
+		{
+			if (double.TryParse(angleStr, System.Globalization.CultureInfo.InvariantCulture, out double angle))
+			{
+				RotationAngle = angle;
+			}
+		}
+
+		private List<byte[]>? _baseLayerPixelsBeforeRotation;
+
+		public void StartRotationDrag()
+		{
+			var targets = TransformTarget switch
+			{
+				TransformTargetOption.AllLayers => Layers.ToList(),
+				TransformTargetOption.VisibleLayers => Layers.Where(l => l.IsVisible).ToList(),
+				_ => ActiveLayer != null ? new List<LayerViewModel> { ActiveLayer } : new List<LayerViewModel>()
+			};
+			_baseLayerPixelsBeforeRotation = targets.Select(t => t.Pixels.ToArray()).ToList();
+		}
+
+		public void EndRotationDrag()
+		{
+			if (_baseLayerPixelsBeforeRotation != null)
+			{
+				SaveHistoryState();
+				_baseLayerPixelsBeforeRotation = null;
+			}
+		}
+
+		public void ApplyRotationPreview(double degrees)
+		{
+			var targets = TransformTarget switch
+			{
+				TransformTargetOption.AllLayers => Layers.ToList(),
+				TransformTargetOption.VisibleLayers => Layers.Where(l => l.IsVisible).ToList(),
+				_ => ActiveLayer != null ? new List<LayerViewModel> { ActiveLayer } : new List<LayerViewModel>()
+			};
+
+			if (targets.Count == 0 || CanvasWidth <= 0 || CanvasHeight <= 0)
+				return;
+
+			if (_baseLayerPixelsBeforeRotation == null || _baseLayerPixelsBeforeRotation.Count != targets.Count)
+			{
+				_baseLayerPixelsBeforeRotation = targets.Select(t => t.Pixels.ToArray()).ToList();
+			}
+
+			double rad = degrees * Math.PI / 180.0;
+			double cos = Math.Cos(rad);
+			double sin = Math.Sin(rad);
+
+			double cx = (CanvasWidth - 1) / 2.0;
+			double cy = (CanvasHeight - 1) / 2.0;
+
+			for (int i = 0; i < targets.Count; i++)
+			{
+				var layer = targets[i];
+				byte[] src = _baseLayerPixelsBeforeRotation[i];
+				byte[] dst = new byte[src.Length];
+
+				for (int y = 0; y < CanvasHeight; y++)
+				{
+					for (int x = 0; x < CanvasWidth; x++)
+					{
+						double dx = x - cx;
+						double dy = y - cy;
+
+						double srcX = dx * cos + dy * sin + cx;
+						double srcY = -dx * sin + dy * cos + cy;
+
+						int nearestX = (int)Math.Round(srcX);
+						int nearestY = (int)Math.Round(srcY);
+
+						if (nearestX >= 0 && nearestX < CanvasWidth && nearestY >= 0 && nearestY < CanvasHeight)
+						{
+							int srcIdx = (nearestY * CanvasWidth + nearestX) * 4;
+							int dstIdx = (y * CanvasWidth + x) * 4;
+							dst[dstIdx] = src[srcIdx];
+							dst[dstIdx + 1] = src[srcIdx + 1];
+							dst[dstIdx + 2] = src[srcIdx + 2];
+							dst[dstIdx + 3] = src[srcIdx + 3];
+						}
+					}
+				}
+
+				layer.Pixels = dst;
+			}
+
+			UpdateCanvasPreview();
+		}
+
+		private void PerformRotation(int angleDegrees)
+		{
+			var targets = TransformTarget switch
+			{
+				TransformTargetOption.AllLayers => Layers.ToList(),
+				TransformTargetOption.VisibleLayers => Layers.Where(l => l.IsVisible).ToList(),
+				_ => ActiveLayer != null ? new List<LayerViewModel> { ActiveLayer } : new List<LayerViewModel>()
+			};
+
+			if (targets.Count == 0 || CanvasWidth <= 0 || CanvasHeight <= 0)
+				return;
+
+			SaveHistoryState();
+
+			int w = CanvasWidth;
+			int h = CanvasHeight;
+
+			foreach (var layer in targets)
+			{
+				byte[] src = layer.Pixels;
+				byte[] dst = new byte[src.Length];
+
+				for (int y = 0; y < h; y++)
+				{
+					for (int x = 0; x < w; x++)
+					{
+						int newX = x;
+						int newY = y;
+
+						if (angleDegrees == 90)
+						{
+							newX = h - 1 - y;
+							newY = x;
+						}
+						else if (angleDegrees == -90 || angleDegrees == 270)
+						{
+							newX = y;
+							newY = w - 1 - x;
+						}
+						else if (angleDegrees == 180)
+						{
+							newX = w - 1 - x;
+							newY = h - 1 - y;
+						}
+
+						if (newX >= 0 && newX < w && newY >= 0 && newY < h)
+						{
+							int srcIdx = (y * w + x) * 4;
+							int dstIdx = (newY * w + newX) * 4;
+							dst[dstIdx] = src[srcIdx];
+							dst[dstIdx + 1] = src[srcIdx + 1];
+							dst[dstIdx + 2] = src[srcIdx + 2];
+							dst[dstIdx + 3] = src[srcIdx + 3];
+						}
+					}
+				}
+
+				layer.Pixels = dst;
+			}
+
+			if (HasSelection && (TransformTarget == TransformTargetOption.ActiveLayer || (ActiveLayer != null && targets.Contains(ActiveLayer))))
+			{
+				bool[,] newMask = new bool[w, h];
+				for (int y = 0; y < h; y++)
+				{
+					for (int x = 0; x < w; x++)
+					{
+						int newX = x;
+						int newY = y;
+						if (angleDegrees == 90)
+						{
+							newX = h - 1 - y;
+							newY = x;
+						}
+						else if (angleDegrees == -90 || angleDegrees == 270)
+						{
+							newX = y;
+							newY = w - 1 - x;
+						}
+						else if (angleDegrees == 180)
+						{
+							newX = w - 1 - x;
+							newY = h - 1 - y;
+						}
+
+						if (newX >= 0 && newX < w && newY >= 0 && newY < h)
+						{
+							newMask[newX, newY] = _selectionMask[x, y];
+						}
+					}
+				}
+				_selectionMask = newMask;
 			}
 
 			UpdateCanvasPreview();
