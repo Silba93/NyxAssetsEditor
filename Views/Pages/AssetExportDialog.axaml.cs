@@ -9,10 +9,12 @@ namespace NyxAssetsEditor.Views.Pages;
 public partial class AssetExportDialog : Window
 {
 	private static string _lastExportDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+	private readonly bool _showThingsFormats;
 
 	public bool IsConfirmed { get; private set; }
 	public string ExportPath => PathInput?.Text?.Trim() ?? string.Empty;
 	public string ExportName => NameInput?.Text?.Trim() ?? "item";
+	public bool SkipWestDirection => SkipWestCheckBox?.IsChecked == true && SkipWestCheckBox.IsVisible;
 	public string ExportFormat
 	{
 		get
@@ -33,6 +35,7 @@ public partial class AssetExportDialog : Window
 
 	public AssetExportDialog(string defaultName, bool showThingsFormats) : this()
 	{
+		_showThingsFormats = showThingsFormats;
 		NameInput.Text = defaultName;
 		PathInput.Text = _lastExportDirectory;
 
@@ -44,6 +47,31 @@ public partial class AssetExportDialog : Window
 
 		PathInput.TextChanged += (_, _) => UpdateExportEnabled();
 		UpdateExportEnabled();
+		SubscribeFormatChanges();
+		UpdateSkipWestVisibility();
+	}
+
+	private void SubscribeFormatChanges()
+	{
+		if (PngRadio != null) PngRadio.IsCheckedChanged += OnFormatChanged;
+		if (BmpRadio != null) BmpRadio.IsCheckedChanged += OnFormatChanged;
+		if (JpgRadio != null) JpgRadio.IsCheckedChanged += OnFormatChanged;
+		if (ObdRadio != null) ObdRadio.IsCheckedChanged += OnFormatChanged;
+		if (NyxRadio != null) NyxRadio.IsCheckedChanged += OnFormatChanged;
+	}
+
+	private void OnFormatChanged(object? sender, RoutedEventArgs e)
+	{
+		UpdateSkipWestVisibility();
+	}
+
+	private void UpdateSkipWestVisibility()
+	{
+		if (SkipWestCheckBox == null)
+			return;
+
+		bool isGraphicalFormat = PngRadio?.IsChecked == true || BmpRadio?.IsChecked == true || JpgRadio?.IsChecked == true;
+		SkipWestCheckBox.IsVisible = _showThingsFormats && isGraphicalFormat;
 	}
 
 	private void UpdateExportEnabled()

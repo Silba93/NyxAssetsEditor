@@ -233,7 +233,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 						await dialog.ShowDialog(window);
 						if (dialog.IsConfirmed)
 						{
-							PerformThingExport(vm, e.Things, dialog.ExportName, dialog.ExportPath, dialog.ExportFormat);
+							PerformThingExport(vm, e.Things, dialog.ExportName, dialog.ExportPath, dialog.ExportFormat, dialog.SkipWestDirection);
 						}
 					}
 					break;
@@ -478,19 +478,19 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 			}
 		}
 
-		private static void WriteThingSpritesheetExport(SpriteLoader loader, NyxAssets.Things.ThingType thing, string outputPath, string format)
+		private static void WriteThingSpritesheetExport(SpriteLoader loader, NyxAssets.Things.ThingType thing, string outputPath, string format, bool skipWest = false)
 		{
 			using var spriteSource = new SpriteLoaderSpriteSource(loader);
-			WriteThingSpritesheetExport(spriteSource, thing, outputPath, format);
+			WriteThingSpritesheetExport(spriteSource, thing, outputPath, format, skipWest);
 		}
 
-		private static void WriteThingSpritesheetExport(SpriteLoaderSpriteSource spriteSource, NyxAssets.Things.ThingType thing, string outputPath, string format)
+		private static void WriteThingSpritesheetExport(SpriteLoaderSpriteSource spriteSource, NyxAssets.Things.ThingType thing, string outputPath, string format, bool skipWest = false)
 		{
 			var ok = format switch
 			{
-				"jpg" or "jpeg" => ThingSpriteSheetExporter.TryWriteThingSpriteSheetJpeg(spriteSource, thing, outputPath),
-				"bmp" => ThingSpriteSheetExporter.TryWriteThingSpriteSheetBmp(spriteSource, thing, outputPath),
-				_ => ThingSpriteSheetExporter.TryWriteThingSpriteSheetPng(spriteSource, thing, outputPath),
+				"jpg" or "jpeg" => NyxAssetsEditor.Services.ImportExport.ThingSpriteSheetExporterCustom.TryWriteThingSpriteSheetJpeg(spriteSource, thing, outputPath, skipWest: skipWest),
+				"bmp" => NyxAssetsEditor.Services.ImportExport.ThingSpriteSheetExporterCustom.TryWriteThingSpriteSheetBmp(spriteSource, thing, outputPath, skipWest: skipWest),
+				_ => NyxAssetsEditor.Services.ImportExport.ThingSpriteSheetExporterCustom.TryWriteThingSpriteSheetPng(spriteSource, thing, outputPath, skipWest: skipWest),
 			};
 
 			if (!ok)
@@ -502,7 +502,8 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 			IReadOnlyList<ThingItemViewModel> things,
 			string name,
 			string folderPath,
-			string format)
+			string format,
+			bool skipWest = false)
 		{
 			if (things.Count == 0)
 				return;
@@ -547,7 +548,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					}
 					else
 					{
-						WriteThingSpritesheetExport(loader, thingType, outputPath, formatLower);
+						WriteThingSpritesheetExport(loader, thingType, outputPath, formatLower, skipWest);
 					}
 				}
 				else
@@ -572,7 +573,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 						}
 						else
 						{
-							WriteThingSpritesheetExport(spriteSource, thingType, outputPath, formatLower);
+							WriteThingSpritesheetExport(spriteSource, thingType, outputPath, formatLower, skipWest);
 						}
 					}
 				}
