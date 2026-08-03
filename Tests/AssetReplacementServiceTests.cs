@@ -23,7 +23,7 @@ public class AssetReplacementServiceTests
 		PutItem(target, 100, 1, pickupable: false);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100, AllowMissingIds: false, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100, AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -43,7 +43,7 @@ public class AssetReplacementServiceTests
 	}
 
 	[Fact]
-	public async Task StrictRange_AbortsWhenEitherSideHasAGap()
+	public async Task Range_WithNoSafeMatchesDoesNotMutate()
 	{
 		var source = await CreatePair(spriteCount: 1);
 		var target = await CreatePair(spriteCount: 1);
@@ -51,7 +51,7 @@ public class AssetReplacementServiceTests
 		PutItem(target, 100, 1, pickupable: false);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101, AllowMissingIds: false, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Things, ThingKind.Item, 101, 101, AddMissingTargetIds: false));
 
 		Assert.False(batch.CanApply);
 		Assert.Single(batch.Skipped);
@@ -59,7 +59,7 @@ public class AssetReplacementServiceTests
 	}
 
 	[Fact]
-	public async Task PermissiveRange_ReplacesSafeIntersectionAndReportsGaps()
+	public async Task Range_ReplacesSafeIntersectionAndReportsGaps()
 	{
 		var source = await CreatePair(spriteCount: 1);
 		var target = await CreatePair(spriteCount: 1);
@@ -67,7 +67,7 @@ public class AssetReplacementServiceTests
 		PutItem(target, 100, 1, pickupable: false);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101, AllowMissingIds: true, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101, AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -77,7 +77,7 @@ public class AssetReplacementServiceTests
 	}
 
 	[Fact]
-	public async Task PermissiveRange_SkipsMissingTargetWithoutCreatingIt()
+	public async Task Range_SkipsMissingTargetWithoutCreatingIt()
 	{
 		var source = await CreatePair(spriteCount: 1);
 		var target = await CreatePair(spriteCount: 1);
@@ -86,7 +86,7 @@ public class AssetReplacementServiceTests
 		PutItem(target, 100, 1, pickupable: false);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101, AllowMissingIds: true, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101, AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -96,7 +96,7 @@ public class AssetReplacementServiceTests
 	}
 
 	[Fact]
-	public async Task PermissiveThingRange_SkipsWholeThingWhenTargetSpriteIsMissing()
+	public async Task ThingRange_SkipsWholeThingWhenTargetSpriteIsMissing()
 	{
 		var source = await CreatePair(spriteCount: 2);
 		var target = await CreatePair(spriteCount: 1);
@@ -104,7 +104,7 @@ public class AssetReplacementServiceTests
 		PutItem(target, 100, 2, pickupable: false);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100, AllowMissingIds: true, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100, AddMissingTargetIds: false));
 
 		Assert.False(batch.CanApply);
 		Assert.Single(batch.Skipped);
@@ -124,7 +124,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100,
-			AllowMissingIds: false, AddMissingTargetIds: false));
+			AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -146,7 +146,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -166,7 +166,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 101,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -187,7 +187,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Effect, 1, 1,
-			AllowMissingIds: false, AddMissingTargetIds: false));
+			AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -207,7 +207,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Effect, 1, 1,
-			AllowMissingIds: false, AddMissingTargetIds: false));
+			AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -225,7 +225,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Effect, 1, 1,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -235,7 +235,7 @@ public class AssetReplacementServiceTests
 	}
 
 	[Fact]
-	public async Task SpriteRange_PermissiveModeCopiesIntersectionOnly()
+	public async Task SpriteRange_CopiesIntersectionOnly()
 	{
 		var source = await CreatePair(spriteCount: 2);
 		var target = await CreatePair(spriteCount: 1);
@@ -243,7 +243,7 @@ public class AssetReplacementServiceTests
 		source.SpritePanel.Loader.SetSpritePixels(1, expected);
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
-			source, target, AssetReplacementMode.Sprites, null, 1, 2, AllowMissingIds: true, AddMissingTargetIds: false));
+			source, target, AssetReplacementMode.Sprites, null, 1, 2, AddMissingTargetIds: false));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -263,7 +263,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Item, 100, 100,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -289,7 +289,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Sprites, null, 2, 2,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 		var result = AssetReplacementService.Apply(batch);
 
 		Assert.True(result.Succeeded);
@@ -308,7 +308,7 @@ public class AssetReplacementServiceTests
 
 		var batch = AssetReplacementService.Prepare(new AssetReplacementRequest(
 			source, target, AssetReplacementMode.Things, ThingKind.Item, 101, 101,
-			AllowMissingIds: false, AddMissingTargetIds: true));
+			AddMissingTargetIds: true));
 
 		Assert.False(batch.CanApply);
 		Assert.Single(batch.Skipped);

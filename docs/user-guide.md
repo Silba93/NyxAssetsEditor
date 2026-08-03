@@ -92,9 +92,8 @@ Open **Replacer** from the Assets toolbar to copy an inclusive Thing or Sprite I
 
 - Choose different source and target pairs, the Things/Sprites mode, and the From/To IDs.
 - Thing mode also selects Items, Outfits, Effects, or Missiles.
-- By default, any unavailable source or target ID blocks the complete operation.
-- Enable **Skip unavailable IDs** to replace safe matches and report skipped IDs without creating target entries.
-- Enable **Create missing target IDs** to append missing Things without gaps. Additional source sprites are deduplicated across the whole batch, appended contiguously at the end of the target Sprite archive, and remapped into the copied Thing definitions.
+- Unavailable IDs are skipped automatically and reported without changing their targets.
+- Enable **Create missing target IDs** to append missing Things without gaps. Additional source sprites are deduplicated across the whole batch, appended contiguously at the end of the target Sprite archive, and remapped into the copied Thing definitions. Missing or invalid IDs that cannot be created are still skipped and reported.
 - Cross-version replacement keeps each panel's own client-format settings. Empty sprite slots (`0`) remain empty, improved animation timing is converted for legacy targets, and modern outfit frame groups are collapsed when the target format cannot store them.
 - When frame amounts differ, the Replacer reports a warning per Thing. Higher-frame sources retain their frames and may append sprites; lower-frame sources reduce the copied definition while surplus target sprites remain untouched and may become unreferenced.
 - Use the Replacer title-bar Undo/Redo buttons, or `Ctrl+Z` / `Ctrl+Y`, to reverse or reapply a complete replacement across its affected target viewers.
