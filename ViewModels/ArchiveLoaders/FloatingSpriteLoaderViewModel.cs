@@ -593,6 +593,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			ExportSelectedJpegCommand.NotifyCanExecuteChanged();
 			ExportSelectedBmpCommand.NotifyCanExecuteChanged();
 			ExportSelectedCommand.NotifyCanExecuteChanged();
+			ReplaceSelectedSpritesCommand.NotifyCanExecuteChanged();
 			PasteSelectedSpriteCommand.NotifyCanExecuteChanged();
 		}
 
@@ -706,7 +707,20 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		}
 
 		public void RequestReplaceSprite(SpriteViewModel sprite) =>
-			RequestImportSprites(new[] { sprite });
+			RequestReplaceSprites(new[] { sprite });
+
+		public void RequestReplaceSprites(IEnumerable<SpriteViewModel> sprites)
+		{
+			var list = sprites.Where(sprite => sprite.Id != 0).OrderBy(sprite => sprite.Id).ToList();
+			if (list.Count == 0)
+				return;
+			if (list.Count > 1)
+			{
+				ParentViewModel?.OpenReplacerForSprites(this, list[0].Id, list[^1].Id);
+				return;
+			}
+			RequestSpriteFileDialog?.Invoke(this, new SpriteFileRequestEventArgs(list, "replace"));
+		}
 
 		public void RequestExportSprite(SpriteViewModel sprite, string format) =>
 			RequestExportSprites(new[] { sprite }, format);
@@ -933,6 +947,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		[RelayCommand(CanExecute = nameof(HasSpriteSelection))]
 		private void ExportSelected() => RequestExportSprites(GetSelectedSprites(), "export_popup");
+
+		[RelayCommand(CanExecute = nameof(HasSpriteSelection))]
+		private void ReplaceSelectedSprites() => RequestReplaceSprites(GetSelectedSprites());
 
 		public async void HandleCopyShortcut()
 		{
@@ -1321,6 +1338,75 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			RefreshUndoRedoCommands();
 		}
 
+		public Services.Archive.SpriteUndoAction ApplyReplacementPixels(
+			IReadOnlyDictionary<uint, byte[]> pixels,
+			bool addMissingTargetIds = false)
+		{
+			var ids = pixels.Keys.Distinct().OrderBy(id => id).ToList();
+			if (ids.Count == 0)
+				throw new InvalidOperationException("The replacement batch is empty.");
+			if (ids.Any(id => id == 0) || (!addMissingTargetIds && ids.Any(id => id > Loader.SpriteCount)))
+				throw new InvalidOperationException("A target sprite no longer exists.");
+			if (pixels.Values.Any(value => value == null || value.Length != NyxAssets.Sprites.SpritePixelCodec.RgbaBufferLength))
+				throw new InvalidOperationException("Every replacement sprite must be an exact 32x32 RGBA buffer.");
+
+			StartSpriteTransaction(ids);
+			var action = _currentAction ?? throw new InvalidOperationException("Could not start the sprite replacement transaction.");
+			try
+			{
+				var requiredCount = ids[^1];
+				while (Loader.SpriteCount < requiredCount)
+				{
+					var newId = Loader.AddNewSprite();
+					AddedSpriteIds.Add(newId);
+				}
+
+				foreach (var id in ids)
+				{
+					Loader.SetSpritePixels(id, pixels[id]);
+					if (!AddedSpriteIds.Contains(id))
+						ModifiedSpriteIds.Add(id);
+					PagedSprites.FirstOrDefault(sprite => sprite.Id == id)?.InvalidatePreview();
+				}
+
+				HasSavedChanges = true;
+				TotalSprites = Loader.SpriteCount;
+				UpdatePage();
+				GetLinkedThingsPanel()?.RefreshPreviews();
+				EndSpriteTransaction(ids);
+				return action;
+			}
+			catch
+			{
+				RestoreReplacementPixels(action, discardUndo: true);
+				throw;
+			}
+		}
+
+		public void RollbackReplacementPixels(Services.Archive.SpriteUndoAction action) =>
+			RestoreReplacementPixels(action, discardUndo: true);
+
+		private void RestoreReplacementPixels(Services.Archive.SpriteUndoAction action, bool discardUndo)
+		{
+			if (discardUndo)
+				_undoRedoStack?.DiscardLatestUndoIfMatches(action);
+			while (Loader.SpriteCount > action.SpriteCountBefore)
+				Loader.RemoveLastSprite();
+			while (Loader.SpriteCount < action.SpriteCountBefore)
+				Loader.AddNewSprite();
+			foreach (var pair in action.PixelsBefore)
+				Loader.SetSpritePixels(pair.Key, pair.Value);
+			AddedSpriteIds.Clear(); foreach (var id in action.AddedBefore) AddedSpriteIds.Add(id);
+			RemovedSpriteIds.Clear(); foreach (var id in action.RemovedBefore) RemovedSpriteIds.Add(id);
+			ModifiedSpriteIds.Clear(); foreach (var id in action.ModifiedBefore) ModifiedSpriteIds.Add(id);
+			HasSavedChanges = action.HasSavedChangesBefore;
+			_currentAction = null;
+			TotalSprites = Loader.SpriteCount;
+			UpdatePage();
+			GetLinkedThingsPanel()?.RefreshPreviews();
+			RefreshUndoRedoCommands();
+		}
+
 		[RelayCommand(CanExecute = nameof(CanUndo))]
 		private void Undo()
 		{
@@ -1413,6 +1499,26 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		private bool CanUndo() => _undoRedoStack?.UndoCount > 0;
 		private bool CanRedo() => _undoRedoStack?.RedoCount > 0;
+
+		public bool CanUndoReplacement(Services.Archive.SpriteUndoAction action) =>
+			_undoRedoStack?.IsLatestUndo(action) == true;
+
+		public bool CanRedoReplacement(Services.Archive.SpriteUndoAction action) =>
+			_undoRedoStack?.IsLatestRedo(action) == true;
+
+		public bool TryUndoReplacement(Services.Archive.SpriteUndoAction action)
+		{
+			if (!CanUndoReplacement(action)) return false;
+			Undo();
+			return true;
+		}
+
+		public bool TryRedoReplacement(Services.Archive.SpriteUndoAction action)
+		{
+			if (!CanRedoReplacement(action)) return false;
+			Redo();
+			return true;
+		}
 
 		public void RefreshUndoRedoCommands()
 		{

@@ -14,6 +14,6 @@ public sealed class SpriteFileRequestEventArgs : EventArgs
 
 	public IReadOnlyList<SpriteViewModel> Sprites { get; }
 	public SpriteViewModel Sprite => Sprites[0];
-	/// <summary>png, jpg, bmp, or empty for import/replace.</summary>
+	/// <summary>png, jpg, bmp, export_popup, replace, or empty for import.</summary>
 	public string Format { get; }
 }
