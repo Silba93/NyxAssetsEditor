@@ -78,7 +78,7 @@ Each Things Viewer panel includes an integrated **Thing Finder** tool (accessibl
 The **Looktype Generator** (opened from the Assets toolbar) allows creators to assemble outfit appearances and corpse items without modifying source archives:
 
 - **Outfit Composition**: Pick Base Outfit ID, Addons (1 & 2), Mount ID, and Action state (Idle vs Walking).
-- **Color Palette Masking**: Mathematical rendering of all 133 Tibia outfit colors applied across yellow (head), red (body), green (legs), and blue (feet) color masks.
+- **Color Palette Masking**: Mathematical rendering of all 133 Character outfit colors applied across yellow (head), red (body), green (legs), and blue (feet) color masks.
 - **Live Lua / XML Code Synchronization**:
   - Automatically generates ready-to-use OTForms Lua or XML code snippet (e.g. `creature.outfit = {type = 136, head = 78, ...}`).
   - Editing Lua or XML in the text box updates the visual preview live in real time.

@@ -3,12 +3,12 @@ using Xunit;
 
 namespace NyxAssetsEditor.Tests;
 
-public sealed class TibiaOutfitPaletteTests
+public sealed class CharacterOutfitPaletteTests
 {
 	[Fact]
 	public void CreatesAll133ColorsInGridOrder()
 	{
-		var colors = TibiaOutfitPalette.Create();
+		var colors = CharacterOutfitPalette.Create();
 		Assert.Equal(133, colors.Count);
 		for (var id = 0; id < colors.Count; id++) Assert.Equal((byte)id, colors[id].Id);
 	}
@@ -21,7 +21,7 @@ public sealed class TibiaOutfitPaletteTests
 	[InlineData(94, 255, 0, 0)]
 	public void MatchesKnownOtClientSamples(int id, byte red, byte green, byte blue)
 	{
-		var color = TibiaOutfitPalette.Get(id);
+		var color = CharacterOutfitPalette.Get(id);
 		Assert.Equal(red, color.Red);
 		Assert.Equal(green, color.Green);
 		Assert.Equal(blue, color.Blue);
@@ -30,7 +30,7 @@ public sealed class TibiaOutfitPaletteTests
 	[Fact]
 	public void OutOfRangeIdsAreClamped()
 	{
-		Assert.Equal(TibiaOutfitPalette.Get(0), TibiaOutfitPalette.Get(-1));
-		Assert.Equal(TibiaOutfitPalette.Get(132), TibiaOutfitPalette.Get(999));
+		Assert.Equal(CharacterOutfitPalette.Get(0), CharacterOutfitPalette.Get(-1));
+		Assert.Equal(CharacterOutfitPalette.Get(132), CharacterOutfitPalette.Get(999));
 	}
 }

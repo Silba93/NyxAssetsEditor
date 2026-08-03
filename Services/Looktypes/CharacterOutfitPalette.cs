@@ -3,26 +3,26 @@ using System.Collections.Generic;
 
 namespace NyxAssetsEditor.Services.Looktypes;
 
-public readonly record struct TibiaOutfitColor(byte Id, byte Red, byte Green, byte Blue)
+public readonly record struct CharacterOutfitColor(byte Id, byte Red, byte Green, byte Blue)
 {
 	public string Hex => $"#{Red:X2}{Green:X2}{Blue:X2}";
 }
 
-public static class TibiaOutfitPalette
+public static class CharacterOutfitPalette
 {
 	public const int Columns = 19;
 	public const int Rows = 7;
 	public const int ColorCount = Columns * Rows;
 
-	public static IReadOnlyList<TibiaOutfitColor> Create()
+	public static IReadOnlyList<CharacterOutfitColor> Create()
 	{
-		var colors = new TibiaOutfitColor[ColorCount];
+		var colors = new CharacterOutfitColor[ColorCount];
 		for (var id = 0; id < colors.Length; id++)
 			colors[id] = Get(id);
 		return colors;
 	}
 
-	public static TibiaOutfitColor Get(int colorId)
+	public static CharacterOutfitColor Get(int colorId)
 	{
 		colorId = Math.Clamp(colorId, 0, ColorCount - 1);
 		float hue;
@@ -51,7 +51,7 @@ public static class TibiaOutfitPalette
 		}
 
 		var (r, g, b) = HsvToRgb(hue, saturation, value);
-		return new TibiaOutfitColor((byte)colorId, r, g, b);
+		return new CharacterOutfitColor((byte)colorId, r, g, b);
 	}
 
 	private static (byte Red, byte Green, byte Blue) HsvToRgb(float h, float s, float v)

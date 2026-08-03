@@ -4,7 +4,7 @@ You can customize the visible flags and their labels in the Thing Editor for eac
 
 ## Protocol Versions Map
 
-The folders `v1` to `v6` correspond to the following Tibia client protocol version ranges (as defined in Object Builder):
+The folders `v1` to `v6` correspond to the following Nyx client protocol version ranges (as defined in Object Builder):
 
 - **v1**: Client versions 7.10 - 7.30 (internal version < 740)
 - **v2**: Client versions 7.40 - 7.50 (internal version < 755)

@@ -1074,24 +1074,35 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				AddPanel(thingsPanel);
 			}
 
-			if (spritePanel != null)
-			{
-				await spritePanel.LoadArchiveAsync(spritePath);
-			}
-
-			if (thingsPanel != null)
+			try
 			{
 				if (spritePanel != null)
 				{
-					var thingsFormat = ArchiveFormatHelper.FromPath(thingsPath);
-					if (ArchiveFormatHelper.AreCompatible(spritePanel.ArchiveFormat, thingsFormat))
-					{
-						thingsPanel.LinkedSpritePanel = spritePanel;
-						thingsPanel.NotifySpriteLinkChanged();
-					}
+					await spritePanel.LoadArchiveAsync(spritePath);
 				}
 
-				await thingsPanel.LoadArchiveAsync(thingsPath, useLastLoadedSprite: spritePanel == null);
+				if (thingsPanel != null)
+				{
+					if (spritePanel != null)
+					{
+						var thingsFormat = ArchiveFormatHelper.FromPath(thingsPath);
+						if (ArchiveFormatHelper.AreCompatible(spritePanel.ArchiveFormat, thingsFormat))
+						{
+							thingsPanel.LinkedSpritePanel = spritePanel;
+							thingsPanel.NotifySpriteLinkChanged();
+						}
+					}
+
+					await thingsPanel.LoadArchiveAsync(thingsPath, useLastLoadedSprite: spritePanel == null);
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Failed to load recent combination: {ex}");
+				if (spritePanel != null && string.IsNullOrEmpty(spritePanel.ErrorMessage))
+					spritePanel.ErrorMessage = $"Failed to load archive:\n{ex.Message}";
+				if (thingsPanel != null && string.IsNullOrEmpty(thingsPanel.ErrorMessage))
+					thingsPanel.ErrorMessage = $"Failed to load things:\n{ex.Message}";
 			}
 		}
 	}

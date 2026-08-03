@@ -52,6 +52,19 @@ namespace NyxAssetsEditor.ViewModels.Pages
 
 		public bool HasFilteredCombinations => FilteredRecentCombinations.Count > 0;
 
+		private string? _statusMessage;
+		public string? StatusMessage
+		{
+			get => _statusMessage;
+			private set
+			{
+				if (SetProperty(ref _statusMessage, value))
+					OnPropertyChanged(nameof(HasStatusMessage));
+			}
+		}
+
+		public bool HasStatusMessage => !string.IsNullOrEmpty(StatusMessage);
+
 		public ObservableCollection<ContributorViewModel> Contributors { get; } = new ObservableCollection<ContributorViewModel>();
 		public bool HasContributors => Contributors.Count > 0;
 
@@ -184,6 +197,14 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			RecentCombinations.Remove(item);
 			OnPropertyChanged(nameof(FilteredRecentCombinations));
 			OnPropertyChanged(nameof(HasFilteredCombinations));
+		}
+
+		public void NotifyMissingRecentCombination(RecentCombinationItemViewModel item, System.Collections.Generic.IReadOnlyList<string> missingPaths)
+		{
+			RemoveCombination(item);
+			StatusMessage = missingPaths.Count == 1
+				? $"Removed from recents — file not found:\n{missingPaths[0]}"
+				: $"Removed from recents — files not found:\n{string.Join("\n", missingPaths)}";
 		}
 
 		public string CurrentVersion

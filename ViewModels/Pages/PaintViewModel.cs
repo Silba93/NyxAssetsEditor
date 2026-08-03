@@ -2428,7 +2428,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		{
 			CustomPalettes.Clear();
 
-			// Add a default Tibia Outfit Mask palette
+			// Add a default Outfit Mask palette
 			var maskPalette = new PaletteViewModel("Outfit Masks", false);
 			maskPalette.Colors.Add(Colors.Red);
 			maskPalette.Colors.Add(Colors.Green);

@@ -30,7 +30,7 @@ Users can import or export single thing definitions (items, outfits, effects, mi
 ### Legacy Formats (`.dat` & `.spr`)
 
 - **`.dat` (Thing Catalog)**: Binary file containing catalog signatures, thing counts, property flags (V1-V6 protocols), sprite IDs, and pattern mapping matrices.
-- **`.spr` (Sprite Archive)**: Binary file containing 32×32 pixel RGBA sprites compressed using Tibia RLE (Run-Length Encoding).
+- **`.spr` (Sprite Archive)**: Binary file containing 32×32 pixel RGBA sprites compressed using Nyx RLE (Run-Length Encoding).
 - **`.otfi` (OTClient Format Information)**: Optional TOML/INI metadata sidecar specifying metadata flags (`extended`, `transparency`, `frame-durations`, `frame-groups`).
 
 ### Modern Formats (`.things` & `.assets`)

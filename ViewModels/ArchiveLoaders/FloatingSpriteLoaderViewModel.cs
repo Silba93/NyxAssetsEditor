@@ -373,93 +373,112 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			ErrorMessage = null;
 
-			if (PreferOtfiSettings && path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
+			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
 			{
-				var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
-				var missing = new List<string>();
-				if (otfi != null && otfi.Extended == null) missing.Add("extended");
-				if (otfi != null && otfi.Transparency == null) missing.Add("transparency");
-				if (otfi == null || missing.Count > 0)
-				{
-					PreferOtfiSettings = false;
-					GuessSettingsFromSignature = true;
-					var reason = warning ?? $"The OTFI file is missing {string.Join(", ", missing)}.";
-					ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to recommended settings.";
-				}
-				else
-				{
-					UseExtendedSpriteIds = otfi.Extended.GetValueOrDefault();
-					UseTransparentPixels = otfi.Transparency.GetValueOrDefault();
-				}
+				FilePath = string.IsNullOrWhiteSpace(path) ? "No archive loaded" : path;
+				ErrorMessage = string.IsNullOrWhiteSpace(path)
+					? "No archive path was provided."
+					: $"Could not find file:\n{path}";
+				OnPropertyChanged(nameof(IsArchiveLoaded));
+				return;
 			}
 
-			if (path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+			try
 			{
-				uint signature = 0;
-				try
+				if (PreferOtfiSettings && path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
 				{
-					using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read))
-					using (var br = new System.IO.BinaryReader(fs))
+					var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
+					var missing = new List<string>();
+					if (otfi != null && otfi.Extended == null) missing.Add("extended");
+					if (otfi != null && otfi.Transparency == null) missing.Add("transparency");
+					if (otfi == null || missing.Count > 0)
 					{
-						if (fs.Length >= 4)
-							signature = br.ReadUInt32();
+						PreferOtfiSettings = false;
+						GuessSettingsFromSignature = true;
+						var reason = warning ?? $"The OTFI file is missing {string.Join(", ", missing)}.";
+						ErrorMessage = $"OTFI settings could not be used. {reason} Reverted to recommended settings.";
+					}
+					else
+					{
+						UseExtendedSpriteIds = otfi.Extended.GetValueOrDefault();
+						UseTransparentPixels = otfi.Transparency.GetValueOrDefault();
 					}
 				}
-				catch (Exception ex)
-				{
-					System.Diagnostics.Debug.WriteLine($"Failed to read spr signature: {ex.Message}");
-				}
 
-				if (signature != 0)
+				if (path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
 				{
-					var versionEntry = ClientVersion.AvailableVersions.Find(v => v.SprSignature == signature);
-					if (versionEntry == null)
+					uint signature = 0;
+					try
 					{
-						if (!SettingsViewModel.AllowUnknownSignatures)
+						using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+						using (var br = new BinaryReader(fs))
 						{
-							ErrorMessage = $"Unsupported version\nSignature: 0x{signature:X8}";
-							OnPropertyChanged(nameof(IsArchiveLoaded));
-							return;
+							if (fs.Length >= 4)
+								signature = br.ReadUInt32();
 						}
 					}
-					else if (GuessSettingsFromSignature && !PreferOtfiSettings)
+					catch (Exception ex)
 					{
-						var version = new NyxAssets.Things.ClientDataVersion { Value = versionEntry.Version };
-						UseExtendedSpriteIds = NyxAssets.Things.DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
+						System.Diagnostics.Debug.WriteLine($"Failed to read spr signature: {ex.Message}");
+					}
+
+					if (signature != 0)
+					{
+						var versionEntry = ClientVersion.AvailableVersions.Find(v => v.SprSignature == signature);
+						if (versionEntry == null)
+						{
+							if (!SettingsViewModel.AllowUnknownSignatures)
+							{
+								ErrorMessage = $"Unsupported version\nSignature: 0x{signature:X8}";
+								OnPropertyChanged(nameof(IsArchiveLoaded));
+								return;
+							}
+						}
+						else if (GuessSettingsFromSignature && !PreferOtfiSettings)
+						{
+							var version = new NyxAssets.Things.ClientDataVersion { Value = versionEntry.Version };
+							UseExtendedSpriteIds = NyxAssets.Things.DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
+						}
+					}
+				}
+
+				AddedSpriteIds.Clear();
+				RemovedSpriteIds.Clear();
+				ModifiedSpriteIds.Clear();
+
+				FilePath = path;
+				await Task.Run(() =>
+					Loader.OpenArchive(path, extendedSpriteIds: UseExtendedSpriteIds, transparentPixels: UseTransparentPixels))
+					.ConfigureAwait(true);
+				TotalSprites = Loader.SpriteCount;
+				CurrentPage = 1;
+				UpdatePage();
+				OnPropertyChanged(nameof(IsArchiveLoaded));
+				ParentViewModel?.OnSpriteArchiveLoaded(this);
+
+				if (Loader.SpriteCount > 0)
+				{
+					string spritePath = FilePath ?? "";
+					if (spritePath == "No archive loaded") spritePath = "";
+
+					if (!string.IsNullOrEmpty(spritePath))
+					{
+						NyxAssetsEditor.Services.Persistence.PersistenceService.AddRecentCombination(
+							spritePath,
+							"",
+							spriteGuess: GuessSettingsFromSignature,
+							spritePreferOtfi: PreferOtfiSettings,
+							spriteTransparent: UseTransparentPixels,
+							spriteExtended: UseExtendedSpriteIds
+						);
 					}
 				}
 			}
-
-			AddedSpriteIds.Clear();
-			RemovedSpriteIds.Clear();
-			ModifiedSpriteIds.Clear();
-
-			FilePath = path;
-			await Task.Run(() =>
-				Loader.OpenArchive(path, extendedSpriteIds: UseExtendedSpriteIds, transparentPixels: UseTransparentPixels))
-				.ConfigureAwait(true);
-			TotalSprites = Loader.SpriteCount;
-			CurrentPage = 1;
-			UpdatePage();
-			OnPropertyChanged(nameof(IsArchiveLoaded));
-			ParentViewModel?.OnSpriteArchiveLoaded(this);
-
-			if (Loader.SpriteCount > 0)
+			catch (Exception ex)
 			{
-				string spritePath = FilePath ?? "";
-				if (spritePath == "No archive loaded") spritePath = "";
-
-				if (!string.IsNullOrEmpty(spritePath))
-				{
-					NyxAssetsEditor.Services.Persistence.PersistenceService.AddRecentCombination(
-						spritePath,
-						"",
-						spriteGuess: GuessSettingsFromSignature,
-						spritePreferOtfi: PreferOtfiSettings,
-						spriteTransparent: UseTransparentPixels,
-						spriteExtended: UseExtendedSpriteIds
-					);
-				}
+				System.Diagnostics.Debug.WriteLine($"Failed to load sprite archive: {ex}");
+				ErrorMessage = $"Failed to load archive:\n{ex.Message}";
+				OnPropertyChanged(nameof(IsArchiveLoaded));
 			}
 		}
 

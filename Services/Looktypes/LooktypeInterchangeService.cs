@@ -138,8 +138,8 @@ public static partial class LooktypeInterchangeService
 		byte Color(string key)
 		{
 			var original = values.GetValueOrDefault(key);
-			var clamped = Math.Min(original, TibiaOutfitPalette.ColorCount - 1);
-			if (original != clamped) warnings.Add($"{key} was clamped to {TibiaOutfitPalette.ColorCount - 1}.");
+			var clamped = Math.Min(original, CharacterOutfitPalette.ColorCount - 1);
+			if (original != clamped) warnings.Add($"{key} was clamped to {CharacterOutfitPalette.ColorCount - 1}.");
 			return (byte)clamped;
 		}
 		var addons = values.GetValueOrDefault("lookAddons");

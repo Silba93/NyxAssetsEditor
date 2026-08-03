@@ -1027,6 +1027,18 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			ErrorMessage = null;
 
+			if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+			{
+				FilePath = string.IsNullOrWhiteSpace(path) ? "No things loaded" : path;
+				ErrorMessage = string.IsNullOrWhiteSpace(path)
+					? "No things path was provided."
+					: $"Could not find file:\n{path}";
+				_catalog = null;
+				OnPropertyChanged(nameof(IsArchiveLoaded));
+				CatalogChanged?.Invoke();
+				return;
+			}
+
 			if (PreferOtfiSettings && path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
 			{
 				var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
@@ -1122,16 +1134,11 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				Console.WriteLine($"[ThingsLoader] FAILED TO LOAD DAT/THINGS: {ex}");
 				Debug.WriteLine($"Failed to load catalog: {ex.Message}");
 				_catalog = null;
+				ErrorMessage = $"Failed to load things:\n{ex.Message}";
 				OnPropertyChanged(nameof(IsArchiveLoaded));
+				CatalogChanged?.Invoke();
 				_allThings.Clear();
-				for (uint i = 1; i <= 320; i++)
-				{
-					var mockThing = new ThingType { Id = i, Kind = ThingKind.Item };
-					var mockGroup = new ThingFrameGroup { SpriteIds = new uint[] { i } };
-					mockThing.FrameGroups.Add(mockGroup);
-					_allThings.Add(mockThing);
-				}
-				TotalThings = (uint)_allThings.Count;
+				TotalThings = 0;
 			}
 
 			_selectionAnchor = null;

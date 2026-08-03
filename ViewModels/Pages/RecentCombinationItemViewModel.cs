@@ -183,6 +183,18 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		[RelayCommand]
 		private void Load()
 		{
+			var missing = new System.Collections.Generic.List<string>();
+			if (!string.IsNullOrEmpty(SpritePath) && !File.Exists(SpritePath))
+				missing.Add(SpritePath);
+			if (!string.IsNullOrEmpty(ThingsPath) && !File.Exists(ThingsPath))
+				missing.Add(ThingsPath);
+
+			if (missing.Count > 0)
+			{
+				_parent.NotifyMissingRecentCombination(this, missing);
+				return;
+			}
+
 			_parent.LoadCombination(
 				SpritePath,
 				ThingsPath,

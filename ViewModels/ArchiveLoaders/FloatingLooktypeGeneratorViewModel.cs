@@ -34,7 +34,7 @@ public sealed class LooktypeColorCellViewModel : ObservableObject
 	public string Hex { get; }
 	private bool _isSelected;
 	public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
-	public LooktypeColorCellViewModel(TibiaOutfitColor color) { Id = color.Id; Hex = color.Hex; }
+	public LooktypeColorCellViewModel(CharacterOutfitColor color) { Id = color.Id; Hex = color.Hex; }
 }
 
 public sealed class LooktypeAddonOptionViewModel : ObservableObject
@@ -110,10 +110,10 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 	public byte BodyColorId => _working.Body;
 	public byte LegColorId => _working.Legs;
 	public byte FeetColorId => _working.Feet;
-	public string HeadColorHex => TibiaOutfitPalette.Get(_working.Head).Hex;
-	public string BodyColorHex => TibiaOutfitPalette.Get(_working.Body).Hex;
-	public string LegColorHex => TibiaOutfitPalette.Get(_working.Legs).Hex;
-	public string FeetColorHex => TibiaOutfitPalette.Get(_working.Feet).Hex;
+	public string HeadColorHex => CharacterOutfitPalette.Get(_working.Head).Hex;
+	public string BodyColorHex => CharacterOutfitPalette.Get(_working.Body).Hex;
+	public string LegColorHex => CharacterOutfitPalette.Get(_working.Legs).Hex;
+	public string FeetColorHex => CharacterOutfitPalette.Get(_working.Feet).Hex;
 
 	private LooktypeColorPart _activeColorPart;
 	public bool IsHeadPalette => _activeColorPart == LooktypeColorPart.Head;
@@ -225,7 +225,7 @@ public partial class FloatingLooktypeGeneratorViewModel : PanelViewModelBase, ID
 		_parent = parent;
 		PanelWidth = DefaultPanelWidth;
 		ContentHeight = DefaultContentHeight;
-		foreach (var color in TibiaOutfitPalette.Create())
+		foreach (var color in CharacterOutfitPalette.Create())
 		{
 			HeadColors.Add(new(color)); BodyColors.Add(new(color)); LegColors.Add(new(color)); FeetColors.Add(new(color));
 		}

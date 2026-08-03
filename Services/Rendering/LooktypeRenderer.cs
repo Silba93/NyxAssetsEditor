@@ -220,13 +220,13 @@ public static class LooktypeRenderer
 		return entry.IsMount ? mountOffset * 2 : mountOffset;
 	}
 
-	private static TibiaOutfitColor ColorForLogicalLayer(int layer, LooktypeProfile profile) => layer switch
+	private static CharacterOutfitColor ColorForLogicalLayer(int layer, LooktypeProfile profile) => layer switch
 	{
-		1 => TibiaOutfitPalette.Get(profile.Body),
-		2 => TibiaOutfitPalette.Get(profile.Legs),
-		3 => TibiaOutfitPalette.Get(profile.Feet),
-		4 => TibiaOutfitPalette.Get(profile.Head),
-		_ => TibiaOutfitPalette.Get(0),
+		1 => CharacterOutfitPalette.Get(profile.Body),
+		2 => CharacterOutfitPalette.Get(profile.Legs),
+		3 => CharacterOutfitPalette.Get(profile.Feet),
+		4 => CharacterOutfitPalette.Get(profile.Head),
+		_ => CharacterOutfitPalette.Get(0),
 	};
 
 	private static void ApplyCombinedMask(byte[] canvas, int width, int height, int x, int y, byte[] mask, LooktypeProfile profile)
@@ -237,16 +237,16 @@ public static class LooktypeRenderer
 			var source = (py * edge + px) * 4;
 			if (mask[source + 3] == 0) continue;
 			var r = mask[source]; var g = mask[source + 1]; var b = mask[source + 2];
-			TibiaOutfitColor color;
-			if (r > 128 && g > 128 && b < 128) color = TibiaOutfitPalette.Get(profile.Head);
-			else if (r >= g && r >= b) color = TibiaOutfitPalette.Get(profile.Body);
-			else if (g >= r && g >= b) color = TibiaOutfitPalette.Get(profile.Legs);
-			else color = TibiaOutfitPalette.Get(profile.Feet);
+			CharacterOutfitColor color;
+			if (r > 128 && g > 128 && b < 128) color = CharacterOutfitPalette.Get(profile.Head);
+			else if (r >= g && r >= b) color = CharacterOutfitPalette.Get(profile.Body);
+			else if (g >= r && g >= b) color = CharacterOutfitPalette.Get(profile.Legs);
+			else color = CharacterOutfitPalette.Get(profile.Feet);
 			MultiplyPixel(canvas, width, height, x + px, y + py, color, mask[source + 3]);
 		}
 	}
 
-	private static void ApplyLogicalMask(byte[] canvas, int width, int height, int x, int y, byte[] mask, TibiaOutfitColor color)
+	private static void ApplyLogicalMask(byte[] canvas, int width, int height, int x, int y, byte[] mask, CharacterOutfitColor color)
 	{
 		var edge = SpritePixelCodec.SpriteEdgeLength;
 		for (var py = 0; py < edge; py++) for (var px = 0; px < edge; px++)
@@ -256,7 +256,7 @@ public static class LooktypeRenderer
 		}
 	}
 
-	private static void MultiplyPixel(byte[] canvas, int width, int height, int x, int y, TibiaOutfitColor color, byte alpha)
+	private static void MultiplyPixel(byte[] canvas, int width, int height, int x, int y, CharacterOutfitColor color, byte alpha)
 	{
 		if (x < 0 || y < 0 || x >= width || y >= height) return;
 		var offset = (y * width + x) * 4;
