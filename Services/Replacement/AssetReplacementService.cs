@@ -25,7 +25,6 @@ public sealed record AssetReplacementRequest(
 	ThingKind? ThingKind,
 	uint FromId,
 	uint ToId,
-	bool AllowMissingIds,
 	bool AddMissingTargetIds);
 
 public sealed record ReplacementSkippedId(uint Id, string Reason);
@@ -197,7 +196,6 @@ public static class AssetReplacementService
 			targetKind,
 			targetId,
 			targetId,
-			AllowMissingIds: false,
 			AddMissingTargetIds: false);
 
 		if (targetPair.ThingsPanel.Catalog == null || !targetPair.SpritePanel.IsArchiveLoaded)
@@ -902,8 +900,6 @@ public static class AssetReplacementService
 		IReadOnlyList<ReplacementSkippedId> skipped,
 		IReadOnlyList<string>? warnings = null)
 	{
-		if (!request.AllowMissingIds && skipped.Count > 0)
-			return new PreparedReplacementBatch(request, things, pixels, skipped, "The range contains unavailable IDs. Enable Skip unavailable IDs to replace the safe matches.", warnings);
 		if (things.Count == 0 && pixels.Count == 0)
 			return new PreparedReplacementBatch(request, things, pixels, skipped, "No safe source/target matches were found in this range.", warnings);
 		return new PreparedReplacementBatch(request, things, pixels, skipped, null, warnings);
