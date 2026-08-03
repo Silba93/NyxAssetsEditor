@@ -162,6 +162,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private bool _useExtendedThingIds = true;
 		private bool _useFrameAnimations = true;
 		private bool _useFrameGroups = true;
+		private uint _clientVersion = SettingsViewModel.ClientVersion;
 		private bool _guessSettingsFromSignature = false;
 		private bool _preferOtfiSettings = true;
 		private string _jumpToIdText = string.Empty;
@@ -278,6 +279,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private Dictionary<string, int>? _catalogFlagUsageCounts;
 
 		public ThingCatalog? Catalog => _catalog;
+		public AssetsViewModel? ParentViewModel => _parentViewModel;
 
 		public Dictionary<string, int> GetOrBuildFlagUsageCounts()
 		{
@@ -308,12 +310,12 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public ClientDataReadOptions GetWriteOptions() => new ClientDataReadOptions
 		{
-			ClientVersion = new ClientDataVersion { Value = SettingsViewModel.ClientVersion },
+			ClientVersion = new ClientDataVersion { Value = _clientVersion },
 			ExtendedSpriteIds = UseExtendedThingIds,
 			ImprovedAnimations = UseFrameAnimations,
 			OutfitFrameGroups = UseFrameGroups,
 			TransparentSprites = SettingsViewModel.UseTransparentPixels,
-			CustomFlagMap = FloatingThingEditorViewModel.GetCustomFlagWriteMap(SettingsViewModel.ClientVersion)
+			CustomFlagMap = FloatingThingEditorViewModel.GetCustomFlagWriteMap(_clientVersion)
 		};
 
 		public FloatingSpriteLoaderViewModel? LinkedSpritePanel { get; set; }
@@ -522,13 +524,16 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		private void OnClientVersionChanged(uint newVersion)
 		{
+			if (IsArchiveLoaded)
+				return;
+			_clientVersion = newVersion;
 			if (GuessSettingsFromSignature && !PreferOtfiSettings)
 				ResetSettingsToDefaults();
 		}
 
 		public void ResetSettingsToDefaults()
 		{
-			var version = new ClientDataVersion { Value = SettingsViewModel.ClientVersion };
+			var version = new ClientDataVersion { Value = _clientVersion };
 			UseExtendedThingIds = DatThingFormatRules.UsesExtendedSpriteIdsByDefault(version);
 			UseFrameAnimations = DatThingFormatRules.UsesImprovedAnimationsByDefault(version);
 			UseFrameGroups = DatThingFormatRules.UsesOutfitFrameGroupsByDefault(version);
@@ -990,6 +995,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			RemovedThingIds.Clear();
 			ModifiedThingIds.Clear();
 
+			_clientVersion = clientVersion;
 			UseExtendedThingIds = useExtendedThingIds;
 			UseFrameAnimations = useFrameAnimations;
 			UseFrameGroups = useFrameGroups;
@@ -1083,6 +1089,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					}
 					else
 					{
+						_clientVersion = versionEntry.Version;
+						if (GuessSettingsFromSignature && !PreferOtfiSettings)
+							ResetSettingsToDefaults();
 						SettingsViewModel.ClientVersion = versionEntry.Version;
 					}
 				}
@@ -1272,9 +1281,14 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		public void RequestReplaceThings(IEnumerable<ThingItemViewModel> things)
 		{
-			var list = things.ToList();
+			var list = things.OrderBy(thing => thing.Id).ToList();
 			if (list.Count == 0 || _catalog == null)
 				return;
+			if (list.Count > 1)
+			{
+				_parentViewModel?.OpenReplacerForThings(this, SelectedSection, list[0].Id, list[^1].Id);
+				return;
+			}
 
 			RequestThingFileDialog?.Invoke(this, new ThingFileRequestEventArgs(list, "replace"));
 		}
@@ -1768,6 +1782,81 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			CatalogChanged?.Invoke();
 		}
 
+		public Services.Archive.ThingUndoAction ApplyReplacementThings(
+			IReadOnlyList<ThingType> things,
+			bool addMissingTargetIds = false)
+		{
+			if (_catalog == null)
+				throw new InvalidOperationException("A target Things archive must be loaded.");
+			if (things.Count == 0)
+				throw new InvalidOperationException("The replacement batch is empty.");
+
+			var orderedThings = things.OrderBy(thing => thing.Kind).ThenBy(thing => thing.Id).ToList();
+			var affected = orderedThings.Select(thing => (thing.Kind, thing.Id)).Distinct().ToList();
+			if (affected.Count != orderedThings.Count)
+				throw new InvalidOperationException("The replacement batch contains a duplicate Thing ID.");
+			var nextIds = Enum.GetValues<ThingKind>().ToDictionary(kind => kind, kind => ThingExchangeHelper.GetNextAppendId(_catalog, kind));
+			foreach (var thing in orderedThings)
+			{
+				if (GetThingFromCatalog(thing.Kind, thing.Id) != null)
+					continue;
+				if (!addMissingTargetIds)
+					throw new InvalidOperationException("A target Thing no longer exists.");
+				if (thing.Id != nextIds[thing.Kind])
+					throw new InvalidOperationException($"Target {thing.Kind} #{thing.Id} cannot be appended because #{nextIds[thing.Kind]} must be added first.");
+				nextIds[thing.Kind]++;
+			}
+
+			StartThingTransaction(affected);
+			var action = _currentAction ?? throw new InvalidOperationException("Could not start the Thing replacement transaction.");
+			try
+			{
+				foreach (var thing in orderedThings)
+				{
+					var isNew = GetThingFromCatalog(thing.Kind, thing.Id) == null;
+					PutThingIntoCatalog(thing.Kind, ThingCloner.Clone(thing, thing.Id));
+					if (isNew)
+						AddedThingIds.Add(thing.Id);
+					else if (!AddedThingIds.Contains(thing.Id))
+						ModifiedThingIds.Add(thing.Id);
+				}
+
+				HasSavedChanges = true;
+				InvalidateFlagUsageCountsCache();
+				ReloadThingsForSection(preserveCurrentPage: true);
+				EndThingTransaction(affected);
+				return action;
+			}
+			catch
+			{
+				RestoreReplacementThings(action, discardUndo: true);
+				throw;
+			}
+		}
+
+		public void RollbackReplacementThings(Services.Archive.ThingUndoAction action) =>
+			RestoreReplacementThings(action, discardUndo: true);
+
+		private void RestoreReplacementThings(Services.Archive.ThingUndoAction action, bool discardUndo)
+		{
+			if (_catalog == null)
+				return;
+			if (discardUndo)
+				_undoRedoStack?.DiscardLatestUndoIfMatches(action);
+			RevertCounts(action.ItemCountBefore, action.OutfitCountBefore, action.EffectCountBefore, action.MissileCountBefore);
+			foreach (var kind in new[] { ThingKind.Item, ThingKind.Outfit, ThingKind.Effect, ThingKind.Missile })
+				foreach (var pair in action.ThingsBefore[kind])
+					PutThingIntoCatalog(kind, pair.Value);
+			AddedThingIds.Clear(); foreach (var id in action.AddedBefore) AddedThingIds.Add(id);
+			RemovedThingIds.Clear(); foreach (var id in action.RemovedBefore) RemovedThingIds.Add(id);
+			ModifiedThingIds.Clear(); foreach (var id in action.ModifiedBefore) ModifiedThingIds.Add(id);
+			HasSavedChanges = action.HasSavedChangesBefore;
+			_currentAction = null;
+			InvalidateFlagUsageCountsCache();
+			ReloadThingsForSection(preserveCurrentPage: true);
+			RefreshUndoRedoCommands();
+		}
+
 		[RelayCommand(CanExecute = nameof(CanUndo))]
 		private void Undo()
 		{
@@ -1850,6 +1939,26 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 		private bool CanUndo() => _undoRedoStack?.UndoCount > 0;
 		private bool CanRedo() => _undoRedoStack?.RedoCount > 0;
+
+		public bool CanUndoReplacement(Services.Archive.ThingUndoAction action) =>
+			_undoRedoStack?.IsLatestUndo(action) == true;
+
+		public bool CanRedoReplacement(Services.Archive.ThingUndoAction action) =>
+			_undoRedoStack?.IsLatestRedo(action) == true;
+
+		public bool TryUndoReplacement(Services.Archive.ThingUndoAction action)
+		{
+			if (!CanUndoReplacement(action)) return false;
+			Undo();
+			return true;
+		}
+
+		public bool TryRedoReplacement(Services.Archive.ThingUndoAction action)
+		{
+			if (!CanRedoReplacement(action)) return false;
+			Redo();
+			return true;
+		}
 
 		public void RefreshUndoRedoCommands()
 		{

@@ -297,6 +297,37 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 			if (window == null)
 				return;
 
+			if (e.Format == "replace")
+			{
+				if (e.Sprites.Count != 1)
+					return;
+				var target = e.Sprite;
+				var imageTypes = new[]
+				{
+					new FilePickerFileType("Image Files") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.tga" } }
+				};
+				var dialog = new SingleAssetReplaceDialog(
+					$"Replace sprite #{target.Id}",
+					"Drop an image file here",
+					imageTypes,
+					new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tga" },
+					path =>
+					{
+						try
+						{
+							var rgba = SpriteImageImporter.Load32x32Rgba(path);
+							vm.ApplyReplacementPixels(new Dictionary<uint, byte[]> { [target.Id] = rgba });
+							return null;
+						}
+						catch (Exception ex)
+						{
+							return $"Failed to replace the sprite: {ex.Message}";
+						}
+					});
+				await dialog.ShowDialog<bool>(window);
+				return;
+			}
+
 			if (e.Format == "export_popup")
 			{
 				string defaultName = "sprite";

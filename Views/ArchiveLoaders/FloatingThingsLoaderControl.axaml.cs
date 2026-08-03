@@ -16,6 +16,7 @@ using NyxAssetsEditor.Services.Rendering;
 using NyxAssetsEditor.ViewModels.ArchiveLoaders;
 using NyxAssetsEditor.ViewModels.Pages;
 using NyxAssetsEditor.Views.Pages;
+using NyxAssetsEditor.Services.Replacement;
 using NyxAssetsEditor.ViewModels.Things;
 using NyxAssets.Things;
 using NyxAssets.Things.Exchange;
@@ -224,7 +225,7 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 					await HandleThingImport(vm, window, replace: false, e.Things);
 					break;
 				case "replace":
-					await HandleThingImport(vm, window, replace: true, e.Things);
+					await HandleSingleThingReplacement(vm, window, e.Things);
 					break;
 				case "export_popup":
 					{
@@ -253,6 +254,43 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 			new FilePickerFileType("Nyx Thing JSON") { Patterns = new[] { "*.json" } },
 			new FilePickerFileType("Object Builder OBD") { Patterns = new[] { "*.obd" } },
 		};
+
+		private static async Task HandleSingleThingReplacement(
+			FloatingThingsLoaderViewModel vm,
+			Window owner,
+			IReadOnlyList<ThingItemViewModel> targets)
+		{
+			if (targets.Count != 1 || vm.Catalog == null || vm.ParentViewModel == null)
+				return;
+			var target = targets[0];
+			var targetPair = vm.ParentViewModel.GetCompilePairs()
+				.FirstOrDefault(pair => ReferenceEquals(pair.ThingsPanel, vm));
+			if (targetPair == null)
+				return;
+
+			var dialog = new SingleAssetReplaceDialog(
+				$"Replace {vm.SectionLabel} #{target.Id}",
+				"Drop a .json or .obd file here",
+				ThingExchangeFileTypes,
+				new[] { ".json", ".obd" },
+				path =>
+				{
+					try
+					{
+						var document = ThingExchangeHelper.LoadFromPath(path, vm.GetWriteOptions());
+						var batch = AssetReplacementService.PrepareSingleThing(document, targetPair, vm.SelectedSection, target.Id);
+						if (!batch.CanApply)
+							return batch.Error ?? "The replacement file could not be applied.";
+						var result = AssetReplacementService.Apply(batch);
+						return result.Succeeded ? null : result.Message;
+					}
+					catch (Exception ex)
+					{
+						return $"Failed to read the replacement file: {ex.Message}";
+					}
+				});
+			await dialog.ShowDialog<bool>(owner);
+		}
 
 		private static async Task HandleThingImport(
 			FloatingThingsLoaderViewModel vm,
