@@ -356,7 +356,12 @@ public static class AssetReplacementService
 			}
 			if (request.AddMissingTargetIds && !TargetUsesExtendedSpriteIds(request.TargetPair.SpritePanel) && id > ushort.MaxValue)
 			{
-				skipped.Add(new(id, "The legacy target Sprite format cannot create IDs above 65535."));
+				var targetSprites = request.TargetPair.SpritePanel;
+				skipped.Add(new(id,
+					$"Raw Sprite replacement preserves IDs, but the target archive was detected as legacy " +
+					$"(16-bit sprite IDs, signature 0x{targetSprites.Loader.SprSignature:X8}). " +
+					$"Source sprite #{id} would require target sprite #{id}; the highest supported target ID is #65535. " +
+					$"The target currently reports {targetSprites.Loader.SpriteCount} sprite(s)."));
 				return;
 			}
 
@@ -493,7 +498,17 @@ public static class AssetReplacementService
 			}
 			if (!TargetUsesExtendedSpriteIds(request.TargetPair.SpritePanel) && proposedNextTargetSpriteId > (uint)ushort.MaxValue + 1)
 			{
-				skipped.Add(new(id, "The replacement needs more sprites than the legacy target format can store (maximum ID 65535)."));
+				var targetSprites = request.TargetPair.SpritePanel;
+				var appendedSpriteCount = proposedNextTargetSpriteId - nextTargetSpriteId;
+				var highestRequiredSpriteId = proposedNextTargetSpriteId - 1;
+				var capacityDetails = targetSprites.Loader.SpriteCount > ushort.MaxValue
+					? $"It reports {targetSprites.Loader.SpriteCount} sprites, which already exceeds the legacy limit. Check that the correct client version and Sprite file were loaded."
+					: $"It currently contains {targetSprites.Loader.SpriteCount} sprite(s), leaving {ushort.MaxValue - targetSprites.Loader.SpriteCount} ID(s) available. " +
+						$"Earlier Things in this batch reserved {nextTargetSpriteId - (targetSprites.Loader.SpriteCount + 1)} additional ID(s), " +
+						$"and this Thing needs {appendedSpriteCount} more, which would require IDs through #{highestRequiredSpriteId}.";
+				skipped.Add(new(id,
+					$"The target Sprite archive was detected as legacy (16-bit sprite IDs, signature 0x{targetSprites.Loader.SprSignature:X8}), " +
+					$"so its highest supported sprite ID is #65535. {capacityDetails}"));
 				return;
 			}
 
@@ -901,7 +916,7 @@ public static class AssetReplacementService
 		IReadOnlyList<string>? warnings = null)
 	{
 		if (things.Count == 0 && pixels.Count == 0)
-			return new PreparedReplacementBatch(request, things, pixels, skipped, "No safe source/target matches were found in this range.", warnings);
+			return new PreparedReplacementBatch(request, things, pixels, skipped, "No IDs could be replaced. Review the skipped-ID details below.", warnings);
 		return new PreparedReplacementBatch(request, things, pixels, skipped, null, warnings);
 	}
 
