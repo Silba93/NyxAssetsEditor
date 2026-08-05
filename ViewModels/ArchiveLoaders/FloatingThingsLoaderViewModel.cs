@@ -843,8 +843,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				: FilePath;
 			var format = ArchiveFormat switch
 			{
-				ArchiveFormat.Dat => ".dat",
-				ArchiveFormat.Things => ".json",
+				ArchiveFormat.Dat => SupportedFileFormats.ExtDat,
+				ArchiveFormat.Things => SupportedFileFormats.ExtJson,
 				_ => ArchiveFormat.ToString()
 			};
 			var settingsMode = PreferOtfiSettings
@@ -1055,7 +1055,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			UseFrameAnimations = useFrameAnimations;
 			UseFrameGroups = useFrameGroups;
 
-			FilePath = format.ToLower() == "dat" ? "Untitled.dat" : "Untitled.things";
+			FilePath = format.ToLower() == "dat"
+				? "Untitled" + SupportedFileFormats.ExtDat
+				: "Untitled.things";
 
 			var datFormat = clientVersion switch
 			{
@@ -1100,7 +1102,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				return;
 			}
 
-			if (PreferOtfiSettings && path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+			if (PreferOtfiSettings && SupportedFileFormats.HasExtension(path, SupportedFileFormats.ExtDat))
 			{
 				var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
 				var missing = new List<string>();
@@ -1123,7 +1125,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				}
 			}
 
-			if (path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(path))
+			if (SupportedFileFormats.HasExtension(path, SupportedFileFormats.ExtDat) && System.IO.File.Exists(path))
 			{
 				uint signature = 0;
 				try
@@ -1242,7 +1244,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		private static ThingCatalog ReadCatalogFromFile(string path, ClientDataReadOptions options)
 		{
 			byte[] bytes = System.IO.File.ReadAllBytes(path);
-			if (path.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+			if (SupportedFileFormats.HasExtension(path, SupportedFileFormats.ExtDat))
 				return new DatThingCatalogReader().Read(bytes, options);
 
 			return new JsonThingCatalogReader().Read(bytes, options);

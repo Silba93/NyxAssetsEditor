@@ -385,7 +385,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			try
 			{
-				if (PreferOtfiSettings && path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
+				if (PreferOtfiSettings && SupportedFileFormats.HasExtension(path, SupportedFileFormats.ExtSpr))
 				{
 					var otfi = OtfiSettingsReader.ReadForArchive(path, out var warning);
 					var missing = new List<string>();
@@ -405,7 +405,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					}
 				}
 
-				if (path.EndsWith(".spr", StringComparison.OrdinalIgnoreCase))
+				if (SupportedFileFormats.HasExtension(path, SupportedFileFormats.ExtSpr))
 				{
 					uint signature = 0;
 					try
@@ -491,7 +491,9 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			UseExtendedSpriteIds = extendedSpriteIds;
 			UseTransparentPixels = transparentPixels;
 
-			FilePath = format.ToLower() == "spr" ? "Untitled.spr" : "Untitled.assets";
+			FilePath = format.ToLower() == "spr"
+				? "Untitled" + SupportedFileFormats.ExtSpr
+				: "Untitled" + SupportedFileFormats.ExtAssets;
 
 			var versionEntry = ClientVersion.AvailableVersions.Find(v => v.Version == clientVersion);
 			uint sprSig = versionEntry?.SprSignature ?? 0U;
@@ -1113,8 +1115,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				: FilePath;
 			var format = ArchiveFormat switch
 			{
-				ArchiveFormat.Spr => ".spr",
-				ArchiveFormat.Assets => ".assets",
+				ArchiveFormat.Spr => SupportedFileFormats.ExtSpr,
+				ArchiveFormat.Assets => SupportedFileFormats.ExtAssets,
 				_ => ArchiveFormat.ToString()
 			};
 			var settingsMode = PreferOtfiSettings
@@ -1222,7 +1224,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 								using var data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
 								if (data != null)
 								{
-									var filePath = Path.Combine(exportPath, $"unused_sprite_{id}.png");
+									var filePath = Path.Combine(exportPath, $"unused_sprite_{id}{SupportedFileFormats.ExtPng}");
 									using var stream = File.OpenWrite(filePath);
 									data.SaveTo(stream);
 								}

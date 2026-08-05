@@ -53,39 +53,29 @@ namespace NyxAssetsEditor.Views.Pages
 				var spriteFormat = pair.SpritePanel.ArchiveFormat;
 				var thingsFormat = pair.ThingsPanel.ArchiveFormat;
 
+				var spriteExt = spriteFormat == ArchiveFormat.Spr
+					? SupportedFileFormats.ExtSpr
+					: SupportedFileFormats.ExtAssets;
 				var spriteFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
 				{
 					Title = "Compile Sprite Archive As",
-					DefaultExtension = spriteFormat == ArchiveFormat.Spr ? ".spr" : ".assets",
+					DefaultExtension = spriteExt,
 					SuggestedFileName = pair.SpritePanel.FileName,
-					FileTypeChoices = spriteFormat == ArchiveFormat.Spr
-						? new[]
-						{
-							new FilePickerFileType("Nyx Sprite Archive") { Patterns = new[] { "*.spr" } }
-						}
-						: new[]
-						{
-							new FilePickerFileType("Nyx Asset Archive") { Patterns = new[] { "*.assets" } }
-						}
+					FileTypeChoices = FilePickerFilters.ForArchiveExtension(spriteExt)
 				});
 
 				if (spriteFile == null)
 					return;
 
+				var thingsExt = thingsFormat == ArchiveFormat.Dat
+					? SupportedFileFormats.ExtDat
+					: SupportedFileFormats.ExtJson;
 				var thingsFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
 				{
 					Title = "Compile Things Archive As",
-					DefaultExtension = thingsFormat == ArchiveFormat.Dat ? ".dat" : ".json",
+					DefaultExtension = thingsExt,
 					SuggestedFileName = pair.ThingsPanel.FileName,
-					FileTypeChoices = thingsFormat == ArchiveFormat.Dat
-						? new[]
-						{
-							new FilePickerFileType("Nyx Dat Archive") { Patterns = new[] { "*.dat" } }
-						}
-						: new[]
-						{
-							new FilePickerFileType("Nyx Things JSON") { Patterns = new[] { "*.json" } }
-						}
+					FileTypeChoices = FilePickerFilters.ForArchiveExtension(thingsExt)
 				});
 
 				if (thingsFile == null)
