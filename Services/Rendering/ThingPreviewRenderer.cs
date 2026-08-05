@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 
 namespace NyxAssetsEditor.Services.Rendering;
 
+public sealed record ThingPreviewFrame(int Width, int Height, byte[] Pixels);
+
 public static class ThingPreviewRenderer
 {
 	private static readonly OutfitFrameRequest SouthIdleOutfit = new()
@@ -24,6 +26,23 @@ public static class ThingPreviewRenderer
 	};
 
 	public static byte[]? RenderPreviewRgba(ThingType thing, SpriteLoader loader)
+	{
+		var preview = RenderPreview(thing, loader);
+		if (preview == null)
+			return null;
+
+		var edge = SpritePixelCodec.SpriteEdgeLength;
+		if (preview.Width == edge && preview.Height == edge)
+			return preview.Pixels;
+
+		return ResizeToSpriteEdge(preview.Pixels, preview.Width, preview.Height);
+	}
+
+	/// <summary>
+	/// Renders the selected frame at its native tile dimensions. Viewer controls
+	/// use this path so a large thing is not downscaled and then enlarged again.
+	/// </summary>
+	public static ThingPreviewFrame? RenderPreview(ThingType thing, SpriteLoader loader)
 	{
 		if (thing.FrameGroups.Count == 0)
 			return null;
@@ -71,12 +90,7 @@ public static class ThingPreviewRenderer
 		if (!drewAny)
 			return null;
 
-		if (canvasW == edge && canvasH == edge)
-		{
-			return canvas;
-		}
-
-		return ResizeToSpriteEdge(canvas, canvasW, canvasH);
+		return new ThingPreviewFrame(canvasW, canvasH, canvas);
 	}
 
 	private static bool TryResolveSelection(ThingType thing, out ThingFrameSelection selection)
