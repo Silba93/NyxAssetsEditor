@@ -869,7 +869,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			if (ArchiveFormat == ArchiveFormat.Dat)
 			{
 				lines.Add($"DAT signature: 0x{_catalog?.DatSignature ?? 0:X8}");
-				lines.Add($"Client version: {_clientVersion}");
+				lines.Add($"Client version: {SettingsViewModel.ClientVersion}");
 				lines.Add($"Extended sprite IDs: {(UseExtendedThingIds ? "Yes" : "No")}");
 				lines.Add($"Frame animations: {(UseFrameAnimations ? "Yes" : "No")}");
 				lines.Add($"Frame groups: {(UseFrameGroups ? "Yes" : "No")}");
