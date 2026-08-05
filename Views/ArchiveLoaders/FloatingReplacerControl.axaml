@@ -44,7 +44,18 @@
 				<StackPanel Spacing="14" Margin="16">
 					<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
 						<StackPanel Spacing="4">
-							<TextBlock Text="Source pair" Classes="label"/>
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="Source pair" Classes="label" VerticalAlignment="Center"/>
+								<Border Width="14" Height="14" CornerRadius="7" Background="#333" BorderBrush="#666"
+									BorderThickness="1" VerticalAlignment="Center" Cursor="Help">
+									<ToolTip.Tip>
+										<TextBlock MaxWidth="300" TextWrapping="Wrap"
+											Text="Read-only input for this replace. Replacer copies Things or Sprites from this pair's ID range — the source archive itself is never modified."/>
+									</ToolTip.Tip>
+									<TextBlock Text="i" FontSize="9" FontWeight="Bold" Foreground="#AAA"
+										HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+							</StackPanel>
 							<ComboBox ItemsSource="{Binding ArchivePairs}" SelectedItem="{Binding SelectedSourcePair}" PlaceholderText="No source pair">
 								<ComboBox.ItemTemplate>
 									<DataTemplate x:DataType="vm:ReplacementArchivePairViewModel">
@@ -57,7 +68,18 @@
 							</ComboBox>
 						</StackPanel>
 						<StackPanel Grid.Column="1" Spacing="4">
-							<TextBlock Text="Target pair" Classes="label"/>
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="Target pair" Classes="label" VerticalAlignment="Center"/>
+								<Border Width="14" Height="14" CornerRadius="7" Background="#333" BorderBrush="#666"
+									BorderThickness="1" VerticalAlignment="Center" Cursor="Help">
+									<ToolTip.Tip>
+										<TextBlock MaxWidth="300" TextWrapping="Wrap"
+											Text="The archive that will be changed. Matching IDs are overwritten with the source definition and sprite pixels. With Create missing target IDs enabled, new Thing/sprite IDs may also be appended here. Undo/Redo applies to this pair."/>
+									</ToolTip.Tip>
+									<TextBlock Text="i" FontSize="9" FontWeight="Bold" Foreground="#AAA"
+										HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+							</StackPanel>
 							<ComboBox ItemsSource="{Binding ArchivePairs}" SelectedItem="{Binding SelectedTargetPair}" PlaceholderText="No target pair">
 								<ComboBox.ItemTemplate>
 									<DataTemplate x:DataType="vm:ReplacementArchivePairViewModel">

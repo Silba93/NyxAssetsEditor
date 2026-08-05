@@ -496,20 +496,29 @@ public static class AssetReplacementService
 					thingTargetSources[newTargetSpriteId] = sourceSpriteId;
 				}
 			}
-			if (!TargetUsesExtendedSpriteIds(request.TargetPair.SpritePanel) && proposedNextTargetSpriteId > (uint)ushort.MaxValue + 1)
+			// Gate on sprite IDs this Thing would write, not SpriteCount (count can exceed the
+			// legacy max while the replace only overwrites existing low IDs).
+			if (!TargetUsesExtendedSpriteIds(request.TargetPair.SpritePanel))
 			{
-				var targetSprites = request.TargetPair.SpritePanel;
-				var appendedSpriteCount = proposedNextTargetSpriteId - nextTargetSpriteId;
-				var highestRequiredSpriteId = proposedNextTargetSpriteId - 1;
-				var capacityDetails = targetSprites.Loader.SpriteCount > ushort.MaxValue
-					? $"It reports {targetSprites.Loader.SpriteCount} sprites, which already exceeds the legacy limit. Check that the correct client version and Sprite file were loaded."
-					: $"It currently contains {targetSprites.Loader.SpriteCount} sprite(s), leaving {ushort.MaxValue - targetSprites.Loader.SpriteCount} ID(s) available. " +
-						$"Earlier Things in this batch reserved {nextTargetSpriteId - (targetSprites.Loader.SpriteCount + 1)} additional ID(s), " +
-						$"and this Thing needs {appendedSpriteCount} more, which would require IDs through #{highestRequiredSpriteId}.";
-				skipped.Add(new(id,
-					$"The target Sprite archive was detected as legacy (16-bit sprite IDs, signature 0x{targetSprites.Loader.SprSignature:X8}), " +
-					$"so its highest supported sprite ID is #65535. {capacityDetails}"));
-				return;
+				var highestRequiredSpriteId = 0u;
+				foreach (var spriteId in thingPixels.Keys)
+					if (spriteId > highestRequiredSpriteId)
+						highestRequiredSpriteId = spriteId;
+				if (highestRequiredSpriteId > ushort.MaxValue)
+				{
+					var targetSprites = request.TargetPair.SpritePanel;
+					var appendedSpriteCount = proposedNextTargetSpriteId - nextTargetSpriteId;
+					var capacityDetails = appendedSpriteCount > 0 && targetSprites.Loader.SpriteCount <= ushort.MaxValue
+						? $"It currently contains {targetSprites.Loader.SpriteCount} sprite(s), leaving {ushort.MaxValue - targetSprites.Loader.SpriteCount} ID(s) available. " +
+							$"Earlier Things in this batch reserved {nextTargetSpriteId - (targetSprites.Loader.SpriteCount + 1)} additional ID(s), " +
+							$"and this Thing needs {appendedSpriteCount} more, which would require IDs through #{highestRequiredSpriteId}."
+						: $"This replace would write sprite #{highestRequiredSpriteId}. " +
+							$"The archive reports {targetSprites.Loader.SpriteCount} sprite(s); check that the correct client version and Sprite file were loaded.";
+					skipped.Add(new(id,
+						$"The target Sprite archive was detected as legacy (16-bit sprite IDs, signature 0x{targetSprites.Loader.SprSignature:X8}), " +
+						$"so its highest supported sprite ID is #65535. {capacityDetails}"));
+					return;
+				}
 			}
 
 			foreach (var warning in compatibilityWarnings)
@@ -702,14 +711,10 @@ public static class AssetReplacementService
 		return entry == null ? null : new ClientDataVersion { Value = entry.Version };
 	}
 
-	private static bool TargetUsesExtendedSpriteIds(FloatingSpriteLoaderViewModel panel)
-	{
-		var signature = panel.Loader.SprSignature;
-		var entry = ClientVersion.AvailableVersions.Find(version => version.SprSignature == signature);
-		return entry == null
-			? panel.UseExtendedSpriteIds
-			: DatThingFormatRules.UsesExtendedSpriteIdsByDefault(new ClientDataVersion { Value = entry.Version });
-	}
+	private static bool TargetUsesExtendedSpriteIds(FloatingSpriteLoaderViewModel panel) =>
+		// Trust how the SPR was opened. Signature→version defaults are only a load hint; a sheet
+		// can keep an old signature while still using the extended (32-bit) SPR header.
+		panel.UseExtendedSpriteIds;
 
 	private static bool TryPrepareMappedThing(
 		ThingType sourceThing,
