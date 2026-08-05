@@ -21,7 +21,7 @@
 							<ComboBoxItem Content="96x96"/>
 							<ComboBoxItem Content="128x128"/>
 						</ComboBox>
-						<TextBlock Text="Display size of things and sprites on the loader panels (grid and list)."
+						<TextBlock Text="Maximum display size in loader panels. Previews use crisp integer scaling."
 								   FontStyle="Italic" FontSize="11" Foreground="#666666"
 								   VerticalAlignment="Center" Margin="8,0,0,0"/>
 					</StackPanel>

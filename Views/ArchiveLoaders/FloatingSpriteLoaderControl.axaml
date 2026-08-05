@@ -2,6 +2,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vm="using:NyxAssetsEditor.ViewModels.ArchiveLoaders"
 			 xmlns:sprites="using:NyxAssetsEditor.ViewModels.Sprites"
+			 xmlns:common="using:NyxAssetsEditor.Views.Common"
 			 x:Class="NyxAssetsEditor.Views.ArchiveLoaders.FloatingSpriteLoaderControl"
 			 x:DataType="vm:FloatingSpriteLoaderViewModel"
 			 Width="{Binding DisplayWidth}"
@@ -141,7 +142,7 @@
 									</ContextMenu>
 								</Border.ContextMenu>
 								<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-									<Image Source="{Binding Preview, Mode=OneWay}" Width="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" Height="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" RenderOptions.BitmapInterpolationMode="None" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									<common:IntegerScaledImage Source="{Binding Preview, Mode=OneWay}" Width="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" Height="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 									<TextBlock Text="{Binding Id, Mode=OneWay}" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" Margin="0,6,0,0"/>
 								</StackPanel>
 							</Border>
@@ -183,7 +184,7 @@
 								<Grid ColumnDefinitions="Auto, *">
 									<!-- Square Image Container -->
 									<Border Grid.Column="0" Width="{Binding $parent[UserControl].DataContext.ListBorderWidthHeight}" Height="{Binding $parent[UserControl].DataContext.ListBorderWidthHeight}" Background="#1D1D1D" BorderBrush="#4A4A4A" BorderThickness="1" CornerRadius="4">
-										<Image Source="{Binding Preview, Mode=OneWay}" Width="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" Height="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+										<common:IntegerScaledImage Source="{Binding Preview, Mode=OneWay}" Width="{Binding $parent[UserControl].DataContext.AssetDisplaySize}" Height="{Binding $parent[UserControl].DataContext.AssetDisplaySize}"/>
 									</Border>
 									
 									<!-- ID Text -->
