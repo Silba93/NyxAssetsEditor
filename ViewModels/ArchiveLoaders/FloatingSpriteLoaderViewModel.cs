@@ -227,6 +227,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					OnPropertyChanged(nameof(HasPreviousPage));
 					OnPropertyChanged(nameof(IsArchiveLoaded));
 					GoToIdCommand.NotifyCanExecuteChanged();
+					ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+					NewSpriteCommand.NotifyCanExecuteChanged();
 				}
 			}
 		}
@@ -380,6 +382,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					? "No archive path was provided."
 					: $"Could not find file:\n{path}";
 				OnPropertyChanged(nameof(IsArchiveLoaded));
+				ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+				NewSpriteCommand.NotifyCanExecuteChanged();
 				return;
 			}
 
@@ -431,6 +435,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 							{
 								ErrorMessage = $"Unsupported version\nSignature: 0x{signature:X8}";
 								OnPropertyChanged(nameof(IsArchiveLoaded));
+								ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+								NewSpriteCommand.NotifyCanExecuteChanged();
 								return;
 							}
 						}
@@ -454,6 +460,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				CurrentPage = 1;
 				UpdatePage();
 				OnPropertyChanged(nameof(IsArchiveLoaded));
+				ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+				NewSpriteCommand.NotifyCanExecuteChanged();
 				ParentViewModel?.OnSpriteArchiveLoaded(this);
 
 				if (Loader.SpriteCount > 0)
@@ -479,6 +487,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				System.Diagnostics.Debug.WriteLine($"Failed to load sprite archive: {ex}");
 				ErrorMessage = $"Failed to load archive:\n{ex.Message}";
 				OnPropertyChanged(nameof(IsArchiveLoaded));
+				ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+				NewSpriteCommand.NotifyCanExecuteChanged();
 			}
 		}
 
@@ -505,6 +515,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			UpdatePage();
 			HasSavedChanges = true;
 			OnPropertyChanged(nameof(IsArchiveLoaded));
+			ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
+			NewSpriteCommand.NotifyCanExecuteChanged();
 			ParentViewModel?.OnSpriteArchiveLoaded(this);
 		}
 
@@ -590,7 +602,6 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			CopySelectedSpriteCommand.NotifyCanExecuteChanged();
 			PasteSelectedSpriteCommand.NotifyCanExecuteChanged();
 			RemoveSelectedSpritesCommand.NotifyCanExecuteChanged();
-			ImportSelectedSpritesCommand.NotifyCanExecuteChanged();
 			ExportSelectedPngCommand.NotifyCanExecuteChanged();
 			ExportSelectedJpegCommand.NotifyCanExecuteChanged();
 			ExportSelectedBmpCommand.NotifyCanExecuteChanged();
@@ -690,11 +701,21 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 			}
 		}
 
+		public void RequestImportNewSprites()
+		{
+			if (!IsArchiveLoaded)
+				return;
+			RequestSpriteFileDialog?.Invoke(this, new SpriteFileRequestEventArgs(Array.Empty<SpriteViewModel>(), "append"));
+		}
+
 		public void RequestImportSprites(IEnumerable<SpriteViewModel> sprites)
 		{
 			var list = sprites.Where(s => s.Id != 0).ToList();
 			if (list.Count == 0)
+			{
+				RequestImportNewSprites();
 				return;
+			}
 
 			RequestSpriteFileDialog?.Invoke(this, new SpriteFileRequestEventArgs(list, ""));
 		}
@@ -935,8 +956,8 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 		[RelayCommand(CanExecute = nameof(HasSpriteSelection))]
 		private void RemoveSelectedSprites() => RemoveSprites(GetSelectedSprites());
 
-		[RelayCommand(CanExecute = nameof(HasSpriteSelection))]
-		private void ImportSelectedSprites() => RequestImportSprites(GetSelectedSprites());
+		[RelayCommand(CanExecute = nameof(IsArchiveLoaded))]
+		private void ImportSelectedSprites() => RequestImportNewSprites();
 
 		[RelayCommand(CanExecute = nameof(HasSpriteSelection))]
 		private void ExportSelectedPng() => RequestExportSprites(GetSelectedSprites(), "png");

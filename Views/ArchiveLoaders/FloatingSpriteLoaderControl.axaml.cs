@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using NyxAssets.Utils;
 using NyxAssetsEditor.Services.DragDrop;
 using NyxAssetsEditor.Services.Archive;
@@ -334,6 +335,30 @@ namespace NyxAssetsEditor.Views.ArchiveLoaders
 				{
 					PerformSpriteExport(vm, e.Sprites, dialog.ExportName, dialog.ExportPath, dialog.ExportFormat);
 				}
+				return;
+			}
+
+			if (e.Format == "append")
+			{
+				var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+				{
+					Title = "Import Images as New Sprites",
+					AllowMultiple = true,
+					FileTypeFilter = FilePickerFilters.OpenImages
+				});
+
+				if (files == null || files.Count == 0)
+					return;
+
+				try
+				{
+					vm.ImportFiles(files.Select(f => f.Path.LocalPath));
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Failed to import sprites: {ex.Message}");
+				}
+
 				return;
 			}
 
