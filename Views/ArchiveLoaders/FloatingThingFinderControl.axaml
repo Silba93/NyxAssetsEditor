@@ -2,6 +2,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:vm="using:NyxAssetsEditor.ViewModels.ArchiveLoaders"
 			 xmlns:local="using:NyxAssetsEditor.Views.ArchiveLoaders"
+			 xmlns:common="using:NyxAssetsEditor.Views.Common"
 			 x:Class="NyxAssetsEditor.Views.ArchiveLoaders.FloatingThingFinderControl"
 			 x:DataType="vm:FloatingThingFinderViewModel"
 			 x:CompileBindings="False"
@@ -140,10 +141,9 @@
 											<Border Width="{Binding $parent[UserControl].DataContext.SourcePanel.ListBorderWidthHeight}"
 												Height="{Binding $parent[UserControl].DataContext.SourcePanel.ListBorderWidthHeight}"
 												Background="#1D1D1D" BorderBrush="#4A4A4A" BorderThickness="1" CornerRadius="4">
-												<Image Source="{Binding PreviewImage}"
+												<common:IntegerScaledImage Source="{Binding PreviewImage}"
 													Width="{Binding $parent[UserControl].DataContext.SourcePanel.AssetDisplaySize}"
-													Height="{Binding $parent[UserControl].DataContext.SourcePanel.AssetDisplaySize}"
-													Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+													Height="{Binding $parent[UserControl].DataContext.SourcePanel.AssetDisplaySize}"/>
 											</Border>
 											<TextBlock Grid.Column="1" Text="{Binding DisplayedId}" VerticalAlignment="Center" Margin="12,0,0,0"
 												Foreground="#E0E0E0" FontSize="13" FontWeight="SemiBold"/>
@@ -177,10 +177,10 @@
 											Height="{Binding $parent[UserControl].DataContext.SourcePanel.GridTileHeight}"
 											ToolTip.Tip="{Binding MatchDetails}" ContextRequested="OnResultContextRequested">
 										<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-											<Image Source="{Binding PreviewImage}"
+											<common:IntegerScaledImage Source="{Binding PreviewImage}"
 												   Width="{Binding $parent[UserControl].DataContext.SourcePanel.AssetDisplaySize}"
 												   Height="{Binding $parent[UserControl].DataContext.SourcePanel.AssetDisplaySize}"
-												   Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+												   HorizontalAlignment="Center" VerticalAlignment="Center"/>
 											<TextBlock Text="{Binding DisplayedId}" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" Margin="0,6,0,0"/>
 										</StackPanel>
 									</Border>

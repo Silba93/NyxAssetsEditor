@@ -638,8 +638,10 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			try
 			{
-				var pixels = ThingPreviewRenderer.RenderPreviewRgba(thing, loader);
-				return pixels == null ? null : _renderer.Convert(pixels);
+				var preview = ThingPreviewRenderer.RenderPreview(thing, loader);
+				return preview == null
+					? null
+					: _renderer.ConvertRgba(preview.Width, preview.Height, preview.Pixels);
 			}
 			catch (Exception ex)
 			{
