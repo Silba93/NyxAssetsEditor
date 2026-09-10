@@ -52,6 +52,7 @@
 							<Border Background="#1E1E1E" BorderThickness="1" BorderBrush="#2D2D2D" CornerRadius="8" Margin="0,0,12,12" Width="280">
 								<Border.ContextMenu>
 									<ContextMenu>
+										<MenuItem Header="{Binding PinMenuHeader}" Command="{Binding TogglePinCommand}"/>
 										<MenuItem Header="Copy path" Command="{Binding CopyPathCommand}"/>
 									</ContextMenu>
 								</Border.ContextMenu>
@@ -92,15 +93,31 @@
 										</Grid>
 									</Button>
 									
-									<!-- Remove Button (X) -->
-									<Button Grid.Column="1" Command="{Binding RemoveCommand}" Width="28" Height="28" Margin="0,0,8,0" Background="Transparent" BorderThickness="0" CornerRadius="14" VerticalAlignment="Center" ToolTip.Tip="Remove from Recents">
-										<Button.Styles>
-											<Style Selector="Button:pointerover">
-												<Setter Property="Background" Value="#33FF5E5E"/>
-											</Style>
-										</Button.Styles>
-										<Image Source="/Assets/Icons/home/close.png" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-									</Button>
+									<!-- Action Buttons (Pin & Remove) -->
+									<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+										<!-- Pin Button -->
+										<Button Command="{Binding TogglePinCommand}" Width="28" Height="28" Margin="0,0,2,0" Background="Transparent" BorderThickness="0" CornerRadius="14" VerticalAlignment="Center" ToolTip.Tip="{Binding PinToolTipText}">
+											<Button.Styles>
+												<Style Selector="Button:pointerover">
+													<Setter Property="Background" Value="#252525"/>
+												</Style>
+											</Button.Styles>
+											<Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+												<Image Source="/Assets/Icons/home/pin_on.png" Width="14" Height="14" IsVisible="{Binding IsPinned}"/>
+												<Image Source="/Assets/Icons/home/pin_off.png" Width="14" Height="14" IsVisible="{Binding !IsPinned}" Opacity="0.6"/>
+											</Panel>
+										</Button>
+
+										<!-- Remove Button (X) -->
+										<Button Command="{Binding RemoveCommand}" Width="28" Height="28" IsVisible="{Binding !IsPinned}" Background="Transparent" BorderThickness="0" CornerRadius="14" VerticalAlignment="Center" ToolTip.Tip="Remove from Recents">
+											<Button.Styles>
+												<Style Selector="Button:pointerover">
+													<Setter Property="Background" Value="#33FF5E5E"/>
+												</Style>
+											</Button.Styles>
+											<Image Source="/Assets/Icons/home/close.png" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Button>
+									</StackPanel>
 								</Grid>
 							</Border>
 						</DataTemplate>

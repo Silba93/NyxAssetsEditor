@@ -137,6 +137,8 @@ namespace NyxAssetsEditor.Services.Persistence
 			public bool ThingsUseExtendedThingIds { get; set; } = true;
 			public bool ThingsUseFrameAnimations { get; set; } = true;
 			public bool ThingsUseFrameGroups { get; set; } = true;
+
+			public bool IsPinned { get; set; }
 		}
 
 		public class AssetsStateModel
@@ -625,6 +627,19 @@ namespace NyxAssetsEditor.Services.Persistence
 				string normSprite = string.IsNullOrEmpty(spritePath) ? "" : Path.GetFullPath(spritePath);
 				string normThings = string.IsNullOrEmpty(thingsPath) ? "" : Path.GetFullPath(thingsPath);
 
+				bool wasPinned = false;
+				var existingItem = model.RecentCombinations.FirstOrDefault(rc =>
+				{
+					string s = string.IsNullOrEmpty(rc.SpritePath) ? "" : Path.GetFullPath(rc.SpritePath);
+					string t = string.IsNullOrEmpty(rc.ThingsPath) ? "" : Path.GetFullPath(rc.ThingsPath);
+					return string.Equals(s, normSprite, StringComparison.OrdinalIgnoreCase) &&
+						   string.Equals(t, normThings, StringComparison.OrdinalIgnoreCase);
+				});
+				if (existingItem != null)
+				{
+					wasPinned = existingItem.IsPinned;
+				}
+
 				// Remove duplicates (case-insensitive comparison)
 				model.RecentCombinations.RemoveAll(rc =>
 				{
@@ -648,10 +663,11 @@ namespace NyxAssetsEditor.Services.Persistence
 					ThingsPreferOtfiSettings = thingsPreferOtfi,
 					ThingsUseExtendedThingIds = thingsExtended,
 					ThingsUseFrameAnimations = thingsAnimations,
-					ThingsUseFrameGroups = thingsGroups
+					ThingsUseFrameGroups = thingsGroups,
+					IsPinned = wasPinned
 				});
 
-				// Keep configured entries count
+				// Keep configured entries count (never trim pinned entries)
 				int maxCombinations = SettingsViewModel.MaxRecentCombinations;
 				if (maxCombinations < 4 || maxCombinations > 20)
 				{
@@ -660,7 +676,13 @@ namespace NyxAssetsEditor.Services.Persistence
 
 				if (model.RecentCombinations.Count > maxCombinations)
 				{
-					model.RecentCombinations.RemoveRange(maxCombinations, model.RecentCombinations.Count - maxCombinations);
+					for (int i = model.RecentCombinations.Count - 1; i >= 0 && model.RecentCombinations.Count > maxCombinations; i--)
+					{
+						if (!model.RecentCombinations[i].IsPinned)
+						{
+							model.RecentCombinations.RemoveAt(i);
+						}
+					}
 				}
 
 				string serialized = TomlSerializer.Serialize(model);
@@ -669,6 +691,42 @@ namespace NyxAssetsEditor.Services.Persistence
 			catch (Exception ex)
 			{
 				Debug.WriteLine($"Failed to save recent combination: {ex.Message}");
+			}
+		}
+
+		public static void SetPinRecentCombination(string spritePath, string thingsPath, bool isPinned)
+		{
+			try
+			{
+				if (!File.Exists(AppStatePath))
+					return;
+
+				string toml = File.ReadAllText(AppStatePath);
+				var model = TomlSerializer.Deserialize<AppStateTomlModel>(toml);
+				if (model?.RecentCombinations == null)
+					return;
+
+				string normSprite = string.IsNullOrEmpty(spritePath) ? "" : Path.GetFullPath(spritePath);
+				string normThings = string.IsNullOrEmpty(thingsPath) ? "" : Path.GetFullPath(thingsPath);
+
+				var item = model.RecentCombinations.FirstOrDefault(rc =>
+				{
+					string s = string.IsNullOrEmpty(rc.SpritePath) ? "" : Path.GetFullPath(rc.SpritePath);
+					string t = string.IsNullOrEmpty(rc.ThingsPath) ? "" : Path.GetFullPath(rc.ThingsPath);
+					return string.Equals(s, normSprite, StringComparison.OrdinalIgnoreCase) &&
+						   string.Equals(t, normThings, StringComparison.OrdinalIgnoreCase);
+				});
+
+				if (item != null)
+				{
+					item.IsPinned = isPinned;
+					string serialized = TomlSerializer.Serialize(model);
+					File.WriteAllText(AppStatePath, serialized);
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Failed to set pin for recent combination: {ex.Message}");
 			}
 		}
 

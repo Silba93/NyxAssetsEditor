@@ -26,6 +26,23 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		public bool ThingsUseFrameAnimations { get; }
 		public bool ThingsUseFrameGroups { get; }
 
+		private bool _isPinned;
+		public bool IsPinned
+		{
+			get => _isPinned;
+			set
+			{
+				if (SetProperty(ref _isPinned, value))
+				{
+					OnPropertyChanged(nameof(PinToolTipText));
+					OnPropertyChanged(nameof(PinMenuHeader));
+				}
+			}
+		}
+
+		public string PinToolTipText => IsPinned ? "Unpin from recents" : "Pin to top";
+		public string PinMenuHeader => IsPinned ? "Unpin" : "Pin to top";
+
 		public string DisplayName { get; }
 		public string DetailsText { get; }
 		public string ToolTipText { get; }
@@ -55,11 +72,13 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			bool thingsPreferOtfi = false,
 			bool thingsExtended = true,
 			bool thingsAnimations = true,
-			bool thingsGroups = true)
+			bool thingsGroups = true,
+			bool isPinned = false)
 		{
 			SpritePath = spritePath;
 			ThingsPath = thingsPath;
 			_parent = parent;
+			_isPinned = isPinned;
 
 			SpriteGuessSettingsFromSignature = spriteGuess;
 			SpritePreferOtfiSettings = spritePreferOtfi;
@@ -186,6 +205,12 @@ namespace NyxAssetsEditor.ViewModels.Pages
 		private void Remove()
 		{
 			_parent.RemoveCombination(this);
+		}
+
+		[RelayCommand]
+		private void TogglePin()
+		{
+			_parent.TogglePin(this);
 		}
 
 		[RelayCommand]

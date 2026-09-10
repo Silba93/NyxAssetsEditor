@@ -41,7 +41,14 @@ namespace NyxAssetsEditor.ViewModels.Pages
 				var list = new System.Collections.Generic.List<RecentCombinationItemViewModel>();
 				foreach (var item in RecentCombinations)
 				{
-					if (_showSpr || item.HasBoth)
+					if (item.IsPinned && (_showSpr || item.HasBoth))
+					{
+						list.Add(item);
+					}
+				}
+				foreach (var item in RecentCombinations)
+				{
+					if (!item.IsPinned && (_showSpr || item.HasBoth))
 					{
 						list.Add(item);
 					}
@@ -95,7 +102,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 					r.ThingsPreferOtfiSettings,
 					r.ThingsUseExtendedThingIds,
 					r.ThingsUseFrameAnimations,
-					r.ThingsUseFrameGroups
+					r.ThingsUseFrameGroups,
+					r.IsPinned
 				));
 			}
 
@@ -197,6 +205,13 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			RecentCombinations.Remove(item);
 			OnPropertyChanged(nameof(FilteredRecentCombinations));
 			OnPropertyChanged(nameof(HasFilteredCombinations));
+		}
+
+		public void TogglePin(RecentCombinationItemViewModel item)
+		{
+			item.IsPinned = !item.IsPinned;
+			NyxAssetsEditor.Services.Persistence.PersistenceService.SetPinRecentCombination(item.SpritePath, item.ThingsPath, item.IsPinned);
+			OnPropertyChanged(nameof(FilteredRecentCombinations));
 		}
 
 		public void NotifyMissingRecentCombination(RecentCombinationItemViewModel item, System.Collections.Generic.IReadOnlyList<string> missingPaths)
