@@ -167,15 +167,22 @@ public sealed partial class ThingFinderFieldViewModel : ObservableObject
 	}
 }
 
-public sealed class ThingFinderResultViewModel : IDisposable
+public sealed class ThingFinderResultViewModel : ObservableObject, IDisposable
 {
 	private readonly FloatingThingFinderViewModel _owner;
 	private WriteableBitmap? _previewImage;
 	private bool _previewRequested;
+	private bool _isSelected;
 
 	public ThingType Thing { get; }
 	public uint DisplayedId => _owner.SourcePanel?.GetDisplayedId(Thing.Kind, Thing.Id) ?? Thing.Id;
 	public string MatchDetails { get; }
+
+	public bool IsSelected
+	{
+		get => _isSelected;
+		set => SetProperty(ref _isSelected, value);
+	}
 
 	public WriteableBitmap? PreviewImage
 	{
@@ -260,19 +267,14 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 					var loader = newPanel.GetActiveSpriteLoader();
 					if (loader != null)
 					{
-						_ = Task.Run(async () =>
-						{
-							SearchBySpriteStatus = "Scanning new sprite archive...";
-							var matched = await FindMatchingSpriteIdsAsync(_targetSpritePixels, loader);
-							_matchingSpriteIds = new HashSet<uint>(matched);
-							SearchBySpriteStatus = $"Found {matched.Count} matching sprites in archive.";
-							ScheduleFilter();
-						});
+						_ = ScanSpriteAsync(_targetSpritePixels, _targetSpriteCols, _targetSpriteRows, loader);
 					}
 					else
 					{
 						_matchingSpriteIds = new HashSet<uint>();
+						_matchingShapeThingIds = null;
 						SearchBySpriteStatus = "No active sprite loader to scan.";
+						ScheduleFilter();
 					}
 				}
 			}
@@ -299,7 +301,32 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private string _searchBySpriteStatus = "No sprite loaded. Drag an image here or Paste.";
 
 	private byte[]? _targetSpritePixels;
+	private int _targetSpriteCols = 1;
+	private int _targetSpriteRows = 1;
 	private HashSet<uint>? _matchingSpriteIds;
+	private HashSet<uint>? _matchingShapeThingIds;
+
+	[ObservableProperty]
+	private bool _exactMatch = true;
+
+	partial void OnExactMatchChanged(bool value)
+	{
+		if (_targetSpritePixels != null && SourcePanel?.GetActiveSpriteLoader() is { } loader)
+		{
+			_ = ScanSpriteAsync(_targetSpritePixels, _targetSpriteCols, _targetSpriteRows, loader);
+		}
+	}
+
+	[ObservableProperty]
+	private bool _matchShape = false;
+
+	partial void OnMatchShapeChanged(bool value)
+	{
+		if (_targetSpritePixels != null && SourcePanel?.GetActiveSpriteLoader() is { } loader)
+		{
+			_ = ScanSpriteAsync(_targetSpritePixels, _targetSpriteCols, _targetSpriteRows, loader);
+		}
+	}
 
 	[ObservableProperty]
 	private bool _isPropertiesExpanded = true;
@@ -335,9 +362,46 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private void ClearSpriteFilter()
 	{
 		_targetSpritePixels = null;
+		_targetSpriteCols = 1;
+		_targetSpriteRows = 1;
 		_matchingSpriteIds = null;
+		_matchingShapeThingIds = null;
 		PastedSpriteImage = null;
 		SearchBySpriteStatus = "No sprite loaded. Drag an image here or Paste.";
+		ScheduleFilter();
+	}
+
+	private async Task ScanSpriteAsync(byte[] pixels, int cols, int rows, NyxAssetsEditor.Services.Archive.SpriteLoader loader)
+	{
+		if (MatchShape)
+		{
+			if (cols > 1 || rows > 1)
+			{
+				SearchBySpriteStatus = $"Scanning multi-tile shape ({cols}x{rows} tiles)...";
+				var matchedThingIds = await FindMatchingThingsByMultiTileShapeAsync(pixels, cols, rows, loader);
+				_matchingShapeThingIds = new HashSet<uint>(matchedThingIds);
+				_matchingSpriteIds = null;
+				SearchBySpriteStatus = $"Found {matchedThingIds.Count} matching {cols}x{rows} objects by shape.";
+			}
+			else
+			{
+				SearchBySpriteStatus = "Scanning sprite archive (shape match)...";
+				var matched = await FindMatchingSpriteIdsByShapeAsync(pixels, loader);
+				_matchingSpriteIds = new HashSet<uint>(matched);
+				_matchingShapeThingIds = null;
+				SearchBySpriteStatus = $"Found {matched.Count} matching sprites by shape.";
+			}
+		}
+		else
+		{
+			_matchingShapeThingIds = null;
+			// For color matching, if image is multi-tile, we match using the composite or first 32x32 tile
+			var singleTilePixels = (cols > 1 || rows > 1) ? ExtractTilePixels(pixels, cols, rows, 0, 0) : pixels;
+			SearchBySpriteStatus = ExactMatch ? "Scanning sprite archive (exact match)..." : "Scanning sprite archive (similarity match, may take time)...";
+			var matched = await FindMatchingSpriteIdsAsync(singleTilePixels, loader, ExactMatch);
+			_matchingSpriteIds = new HashSet<uint>(matched);
+			SearchBySpriteStatus = $"Found {matched.Count} matching sprites in archive.";
+		}
 		ScheduleFilter();
 	}
 
@@ -346,26 +410,26 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		SearchBySpriteStatus = "Processing image...";
 		try
 		{
-			var pixels = ProcessAndResizeBitmap(bitmap);
+			var (pixels, cols, rows) = ProcessImageBitmap(bitmap);
 			if (pixels != null)
 			{
 				_targetSpritePixels = pixels;
-				PastedSpriteImage = CreatePreviewFromPixels(pixels);
-				SearchBySpriteStatus = "Scanning sprite archive...";
+				_targetSpriteCols = cols;
+				_targetSpriteRows = rows;
+				PastedSpriteImage = CreatePreviewFromPixels(pixels, cols * 32, rows * 32);
 				
 				var loader = SourcePanel?.GetActiveSpriteLoader();
 				if (loader != null)
 				{
-					var matched = await FindMatchingSpriteIdsAsync(pixels, loader);
-					_matchingSpriteIds = new HashSet<uint>(matched);
-					SearchBySpriteStatus = $"Found {matched.Count} matching sprites in archive.";
+					await ScanSpriteAsync(pixels, cols, rows, loader);
 				}
 				else
 				{
 					_matchingSpriteIds = new HashSet<uint>();
+					_matchingShapeThingIds = null;
 					SearchBySpriteStatus = "No active sprite loader to scan.";
+					ScheduleFilter();
 				}
-				ScheduleFilter();
 			}
 			else
 			{
@@ -381,12 +445,38 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	[RelayCommand]
 	private async Task PasteSpriteFromClipboardAsync()
 	{
-		var clipboard = Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-			? desktop.MainWindow?.Clipboard
-			: null;
-		if (clipboard == null) return;
 		try
 		{
+			// First try internal SpriteClipboard for 100% 1:1 identical raw byte accuracy
+			var internalPixels = await NyxAssetsEditor.Services.ImportExport.SpriteClipboard.TryGetAsync();
+			if (internalPixels != null && internalPixels.Length == 32 * 32 * 4)
+			{
+				_targetSpritePixels = internalPixels;
+				_targetSpriteCols = 1;
+				_targetSpriteRows = 1;
+				PastedSpriteImage = CreatePreviewFromPixels(internalPixels, 32, 32);
+
+				var activeLoader = SourcePanel?.GetActiveSpriteLoader();
+				if (activeLoader != null)
+				{
+					await ScanSpriteAsync(internalPixels, 1, 1, activeLoader);
+				}
+				else
+				{
+					_matchingSpriteIds = new HashSet<uint>();
+					_matchingShapeThingIds = null;
+					SearchBySpriteStatus = "No active sprite loader to scan.";
+					ScheduleFilter();
+				}
+				return;
+			}
+
+			// Otherwise check system OS clipboard for images from Paint/Browser/etc.
+			var clipboard = Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+				? desktop.MainWindow?.Clipboard
+				: null;
+			if (clipboard == null) return;
+
 			var bitmap = await clipboard.TryGetBitmapAsync();
 			if (bitmap != null)
 			{
@@ -403,7 +493,7 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		}
 	}
 
-	private byte[]? ProcessAndResizeBitmap(Avalonia.Media.Imaging.Bitmap bitmap)
+	private (byte[]? Pixels, int Cols, int Rows) ProcessImageBitmap(Avalonia.Media.Imaging.Bitmap bitmap)
 	{
 		try
 		{
@@ -412,25 +502,34 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 			ms.Position = 0;
 
 			using var skBitmap = SkiaSharp.SKBitmap.Decode(ms);
-			if (skBitmap == null) return null;
+			if (skBitmap == null) return (null, 1, 1);
 
-			var info = new SkiaSharp.SKImageInfo(32, 32, SkiaSharp.SKColorType.Rgba8888, SkiaSharp.SKAlphaType.Unpremul);
+			// Calculate grid columns and rows: either exact multiple of 32 or clamped/rounded
+			int origW = skBitmap.Width;
+			int origH = skBitmap.Height;
+			int cols = Math.Max(1, Math.Min(6, (int)Math.Round((double)origW / 32.0)));
+			int rows = Math.Max(1, Math.Min(6, (int)Math.Round((double)origH / 32.0)));
+
+			int targetW = cols * 32;
+			int targetH = rows * 32;
+
+			var info = new SkiaSharp.SKImageInfo(targetW, targetH, SkiaSharp.SKColorType.Rgba8888, SkiaSharp.SKAlphaType.Unpremul);
 			using var target = new SkiaSharp.SKBitmap(info);
 			using var canvas = new SkiaSharp.SKCanvas(target);
 			canvas.Clear(SkiaSharp.SKColors.Transparent);
-			canvas.DrawBitmap(skBitmap, new SkiaSharp.SKRect(0, 0, skBitmap.Width, skBitmap.Height), new SkiaSharp.SKRect(0, 0, 32, 32), SkiaSharp.SKSamplingOptions.Default);
-			return target.Bytes;
+			canvas.DrawBitmap(skBitmap, new SkiaSharp.SKRect(0, 0, origW, origH), new SkiaSharp.SKRect(0, 0, targetW, targetH), SkiaSharp.SKSamplingOptions.Default);
+			return (target.Bytes, cols, rows);
 		}
 		catch
 		{
-			return null;
+			return (null, 1, 1);
 		}
 	}
 
-	private WriteableBitmap CreatePreviewFromPixels(byte[] pixels)
+	private WriteableBitmap CreatePreviewFromPixels(byte[] pixels, int width, int height)
 	{
 		var dpi = new Avalonia.Vector(96, 96);
-		var bmp = new WriteableBitmap(new Avalonia.PixelSize(32, 32), dpi, Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Unpremul);
+		var bmp = new WriteableBitmap(new Avalonia.PixelSize(width, height), dpi, Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Unpremul);
 		using (var buf = bmp.Lock())
 		{
 			System.Runtime.InteropServices.Marshal.Copy(pixels, 0, buf.Address, pixels.Length);
@@ -438,24 +537,261 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		return bmp;
 	}
 
-	private async Task<List<uint>> FindMatchingSpriteIdsAsync(byte[] targetPixels, NyxAssetsEditor.Services.Archive.SpriteLoader loader)
+	private static byte[] ExtractTilePixels(byte[] fullImagePixels, int cols, int rows, int tileX, int tileY)
+	{
+		byte[] tile = new byte[32 * 32 * 4];
+		int fullStride = cols * 32 * 4;
+		int startX = tileX * 32 * 4;
+		int startY = tileY * 32;
+
+		for (int r = 0; r < 32; r++)
+		{
+			int srcOffset = (startY + r) * fullStride + startX;
+			int dstOffset = r * 32 * 4;
+			Buffer.BlockCopy(fullImagePixels, srcOffset, tile, dstOffset, 32 * 4);
+		}
+		return tile;
+	}
+
+	private static ulong[] ComputeSilhouetteMask(byte[] rgbaPixels)
+	{
+		// 32x32 = 1024 pixels packed into 16 ulongs (1024 / 64)
+		var mask = new ulong[16];
+		int pixelCount = Math.Min(1024, rgbaPixels.Length / 4);
+		for (int p = 0; p < pixelCount; p++)
+		{
+			byte alpha = rgbaPixels[p * 4 + 3];
+			if (alpha > 24)
+			{
+				int wordIdx = p >> 6; // p / 64
+				int bitIdx = p & 63;  // p % 64
+				mask[wordIdx] |= (1UL << bitIdx);
+			}
+		}
+		return mask;
+	}
+
+	private static double ComputeMaskIoU(ulong[] maskA, ulong[] maskB)
+	{
+		int intersection = 0;
+		int union = 0;
+		for (int i = 0; i < 16; i++)
+		{
+			ulong a = maskA[i];
+			ulong b = maskB[i];
+			intersection += System.Numerics.BitOperations.PopCount(a & b);
+			union += System.Numerics.BitOperations.PopCount(a | b);
+		}
+		if (union == 0) return 1.0;
+		return (double)intersection / union;
+	}
+
+	private async Task<List<uint>> FindMatchingSpriteIdsByShapeAsync(byte[] targetPixels, NyxAssetsEditor.Services.Archive.SpriteLoader loader)
+	{
+		return await Task.Run(() =>
+		{
+			var matches = new List<(uint Id, double Similarity)>();
+			var targetMask = ComputeSilhouetteMask(targetPixels);
+			uint count = loader.SpriteCount;
+
+			for (uint id = 1; id <= count; id++)
+			{
+				try
+				{
+					if (loader.IsEmptySprite(id)) continue;
+					byte[] pixels = loader.LoadSpritePixels(id);
+					var spriteMask = ComputeSilhouetteMask(pixels);
+					double iou = ComputeMaskIoU(targetMask, spriteMask);
+					if (iou >= 0.80) // 80% shape similarity threshold
+					{
+						matches.Add((id, iou));
+					}
+				}
+				catch
+				{
+				}
+			}
+
+			return matches
+				.OrderByDescending(m => m.Similarity)
+				.Take(100)
+				.Select(m => m.Id)
+				.ToList();
+		});
+	}
+
+	private async Task<List<uint>> FindMatchingThingsByMultiTileShapeAsync(byte[] fullImagePixels, int cols, int rows, NyxAssetsEditor.Services.Archive.SpriteLoader loader)
+	{
+		return await Task.Run(() =>
+		{
+			var matchedThingIds = new List<(uint Id, double Similarity)>();
+			if (SourcePanel == null) return new List<uint>();
+
+			// Precompute silhouette masks for each tile in the target image grid
+			var targetTileMasks = new ulong[cols, rows][];
+			for (int cy = 0; cy < rows; cy++)
+			{
+				for (int cx = 0; cx < cols; cx++)
+				{
+					var tilePx = ExtractTilePixels(fullImagePixels, cols, rows, cx, cy);
+					targetTileMasks[cx, cy] = ComputeSilhouetteMask(tilePx);
+				}
+			}
+
+			// Precompute sprite masks cache to avoid decoding the same sprite repeatedly
+			var spriteMaskCache = new Dictionary<uint, ulong[]>();
+			ulong[] GetSpriteMask(uint spriteId)
+			{
+				if (spriteMaskCache.TryGetValue(spriteId, out var cached)) return cached;
+				if (spriteId == 0 || loader.IsEmptySprite(spriteId))
+				{
+					var empty = new ulong[16];
+					spriteMaskCache[spriteId] = empty;
+					return empty;
+				}
+				try
+				{
+					var px = loader.LoadSpritePixels(spriteId);
+					var m = ComputeSilhouetteMask(px);
+					spriteMaskCache[spriteId] = m;
+					return m;
+				}
+				catch
+				{
+					var empty = new ulong[16];
+					spriteMaskCache[spriteId] = empty;
+					return empty;
+				}
+			}
+
+			var things = SourcePanel.EnumerateThings(SelectedKind);
+			foreach (var thing in things)
+			{
+				// Match things with exact dimensions (Width == cols && Height == rows)
+				var firstGroup = thing.FrameGroups.FirstOrDefault();
+				if (firstGroup == null) continue;
+				if (firstGroup.Width != (uint)cols || firstGroup.Height != (uint)rows) continue;
+				if (firstGroup.SpriteIds == null || firstGroup.SpriteIds.Length == 0) continue;
+
+				double totalScore = 0;
+				int tilesEvaluated = 0;
+
+				for (uint tileY = 0; tileY < (uint)rows; tileY++)
+				{
+					for (uint tileX = 0; tileX < (uint)cols; tileX++)
+					{
+						// In Tibia/Nyx asset format:
+						// GetSpriteIndex(w, h, ...) has screenX = Width - w - 1, screenY = Height - h - 1.
+						// The inner grid indices: innerW = cols - 1 - tileX, innerH = rows - 1 - tileY.
+						uint innerW = (uint)cols - 1 - tileX;
+						uint innerH = (uint)rows - 1 - tileY;
+						uint spriteIdx = firstGroup.GetSpriteIndex(innerW, innerH, 0, 0, 0, 0, 0);
+
+						uint spriteId = (spriteIdx < firstGroup.SpriteIds.Length)
+							? firstGroup.SpriteIds[spriteIdx]
+							: 0;
+
+						var spriteMask = GetSpriteMask(spriteId);
+						var targetMask = targetTileMasks[tileX, tileY];
+						double iou = ComputeMaskIoU(targetMask, spriteMask);
+						totalScore += iou;
+						tilesEvaluated++;
+					}
+				}
+
+				if (tilesEvaluated > 0)
+				{
+					double avgSimilarity = totalScore / tilesEvaluated;
+					if (avgSimilarity >= 0.75) // 75% average shape similarity across multi-tiles
+					{
+						matchedThingIds.Add((thing.Id, avgSimilarity));
+					}
+				}
+			}
+
+			return matchedThingIds
+				.OrderByDescending(t => t.Similarity)
+				.Take(50)
+				.Select(t => t.Id)
+				.ToList();
+		});
+	}
+
+	private async Task<List<uint>> FindMatchingSpriteIdsAsync(byte[] targetPixels, NyxAssetsEditor.Services.Archive.SpriteLoader loader, bool exactMatch)
 	{
 		return await Task.Run(() =>
 		{
 			var matches = new List<uint>();
 			uint count = loader.SpriteCount;
-			for (uint id = 1; id <= count; id++)
+			// 1024 pixels * 4 channels * 255^2 ≈ 266,322,000 max squared difference
+			const long MaxSpriteDistance = 1024L * 4L * 255L * 255L;
+
+			if (exactMatch)
 			{
-				try
+				for (uint id = 1; id <= count; id++)
 				{
-					byte[] pixels = loader.LoadSpritePixels(id);
-					if (PixelsMatch(pixels, targetPixels))
+					try
 					{
-						matches.Add(id);
+						byte[] pixels = loader.LoadSpritePixels(id);
+						if (PixelsMatch(pixels, targetPixels))
+						{
+							matches.Add(id);
+						}
+					}
+					catch
+					{
 					}
 				}
-				catch
+			}
+			else
+			{
+				// Up to 30% difference allowed, keeping top 50 closest
+				long maxCutoff = (long)(MaxSpriteDistance * 0.30);
+				var scoredMatches = new List<(uint Id, long Distance)>();
+				long minDistance = long.MaxValue;
+
+				for (uint id = 1; id <= count; id++)
 				{
+					try
+					{
+						byte[] pixels = loader.LoadSpritePixels(id);
+						long dist = ComputePixelDistance(pixels, targetPixels, maxCutoff);
+						if (dist <= maxCutoff)
+						{
+							if (dist < minDistance) minDistance = dist;
+							scoredMatches.Add((id, dist));
+						}
+					}
+					catch
+					{
+					}
+				}
+
+				if (scoredMatches.Count > 0)
+				{
+					// If closest is exact (0), allow sprites up to 10% distance difference (recolors, shading variations, edits).
+					// Otherwise allow sprites within 15% distance above the closest found sprite, capped at 30% total difference.
+					long leeway = (long)(MaxSpriteDistance * 0.10);
+					long relativeThreshold = minDistance == 0
+						? leeway
+						: Math.Min(maxCutoff, minDistance + (long)(MaxSpriteDistance * 0.05));
+
+					matches = scoredMatches
+						.Where(sm => sm.Distance <= relativeThreshold)
+						.OrderBy(sm => sm.Distance)
+						.Take(50)
+						.Select(sm => sm.Id)
+						.ToList();
+
+					// If still nothing extra beyond minDistance, take top 25 closest under maxCutoff
+					if (matches.Count <= 1)
+					{
+						matches = scoredMatches
+							.OrderBy(sm => sm.Distance)
+							.Take(25)
+							.Select(sm => sm.Id)
+							.ToList();
+					}
 				}
 			}
 			return matches;
@@ -465,11 +801,23 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private static bool PixelsMatch(byte[] a, byte[] b)
 	{
 		if (a.Length != b.Length) return false;
-		for (int i = 0; i < a.Length; i++)
+		return a.AsSpan().SequenceEqual(b);
+	}
+
+	private static long ComputePixelDistance(byte[] a, byte[] b, long maxThreshold = long.MaxValue)
+	{
+		if (a.Length != b.Length) return long.MaxValue;
+		long total = 0;
+		for (int i = 0; i < a.Length; i += 4)
 		{
-			if (a[i] != b[i]) return false;
+			int diffR = a[i] - b[i];
+			int diffG = a[i + 1] - b[i + 1];
+			int diffB = a[i + 2] - b[i + 2];
+			int diffA = a[i + 3] - b[i + 3];
+			total += (diffR * diffR) + (diffG * diffG) + (diffB * diffB) + (diffA * diffA);
+			if (total > maxThreshold) return total;
 		}
-		return true;
+		return total;
 	}
 
 	public ObservableCollection<ThingFinderFieldViewModel> PropertyFields { get; } = new();
@@ -563,6 +911,76 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	public bool HasResults => ResultCount > 0;
 	public bool HasNoResults => !HasResults;
 
+	private ThingFinderResultViewModel? _selectedResult;
+	public ThingFinderResultViewModel? SelectedResult
+	{
+		get => _selectedResult;
+		set => SetProperty(ref _selectedResult, value);
+	}
+
+	private ThingFinderResultViewModel? _selectionAnchor;
+
+	public IReadOnlyList<ThingFinderResultViewModel> GetSelectedResults() =>
+		PagedResults.Where(r => r.IsSelected).ToList();
+
+	public bool HasSelection => PagedResults.Any(r => r.IsSelected);
+	public int SelectedCount => PagedResults.Count(r => r.IsSelected);
+
+	public void SelectResult(ThingFinderResultViewModel item, bool shift = false, bool ctrl = false)
+	{
+		if (shift)
+		{
+			if (_selectionAnchor != null)
+			{
+				ClearSelection();
+				var list = PagedResults.ToList();
+				var anchorIdx = list.IndexOf(_selectionAnchor);
+				var clickIdx = list.IndexOf(item);
+				if (anchorIdx < 0) anchorIdx = clickIdx;
+				if (clickIdx >= 0)
+				{
+					var start = Math.Min(anchorIdx, clickIdx);
+					var end = Math.Max(anchorIdx, clickIdx);
+					for (var i = start; i <= end; i++)
+						list[i].IsSelected = true;
+				}
+			}
+			else
+			{
+				ClearSelection();
+				item.IsSelected = true;
+				_selectionAnchor = item;
+			}
+		}
+		else if (ctrl)
+		{
+			item.IsSelected = !item.IsSelected;
+			_selectionAnchor = item;
+		}
+		else
+		{
+			ClearSelection();
+			item.IsSelected = true;
+			_selectionAnchor = item;
+		}
+
+		SelectedResult = item;
+		NotifySelectionChanged();
+	}
+
+	public void ClearSelection()
+	{
+		foreach (var r in PagedResults)
+			r.IsSelected = false;
+		NotifySelectionChanged();
+	}
+
+	private void NotifySelectionChanged()
+	{
+		OnPropertyChanged(nameof(HasSelection));
+		OnPropertyChanged(nameof(SelectedCount));
+	}
+
 	public bool ShowConfirmation
 	{
 		get => _showConfirmation;
@@ -628,6 +1046,12 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	}
 
 	[RelayCommand]
+	private void FirstPage()
+	{
+		if (HasPreviousPage) CurrentPage = 1;
+	}
+
+	[RelayCommand]
 	private void PreviousPage()
 	{
 		if (HasPreviousPage) CurrentPage--;
@@ -637,6 +1061,12 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private void NextPage()
 	{
 		if (HasNextPage) CurrentPage++;
+	}
+
+	[RelayCommand]
+	private void LastPage()
+	{
+		if (HasNextPage) CurrentPage = TotalPages;
 	}
 
 	[RelayCommand]
@@ -915,11 +1345,18 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 				criteria,
 				FrameGroupIndex);
 
-			if (_targetSpritePixels != null && _matchingSpriteIds != null)
+			if (_targetSpritePixels != null)
 			{
-				filtered = filtered.Where(thing =>
-					thing.FrameGroups.Any(fg => fg.SpriteIds != null && fg.SpriteIds.Any(id => _matchingSpriteIds.Contains(id)))
-				).ToList();
+				if (_matchingShapeThingIds != null)
+				{
+					filtered = filtered.Where(thing => _matchingShapeThingIds.Contains(thing.Id)).ToList();
+				}
+				else if (_matchingSpriteIds != null)
+				{
+					filtered = filtered.Where(thing =>
+						thing.FrameGroups.Any(fg => fg.SpriteIds != null && fg.SpriteIds.Any(id => _matchingSpriteIds.Contains(id)))
+					).ToList();
+				}
 			}
 
 			_filteredThings.AddRange(filtered);

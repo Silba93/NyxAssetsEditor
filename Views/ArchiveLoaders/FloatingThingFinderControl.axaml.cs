@@ -70,35 +70,70 @@ public partial class FloatingThingFinderControl : UserControl
 		return visual as Canvas;
 	}
 
+	private void OnResultPointerPressed(object? sender, PointerPressedEventArgs e)
+	{
+		if (sender is not Control control || control.DataContext is not ThingFinderResultViewModel result || DataContext is not FloatingThingFinderViewModel vm)
+			return;
+
+		if (e.GetCurrentPoint(control).Properties.IsRightButtonPressed)
+		{
+			if (!result.IsSelected)
+				vm.SelectResult(result, shift: false, ctrl: false);
+			return;
+		}
+
+		var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+		var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+		vm.SelectResult(result, shift, ctrl);
+
+		if (e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+			e.Handled = true;
+	}
+
 	private void OnResultContextRequested(object? sender, ContextRequestedEventArgs e)
 	{
 		if (sender is not Control control || control.DataContext is not ThingFinderResultViewModel result || DataContext is not FloatingThingFinderViewModel vm) return;
+		var selected = vm.GetSelectedResults();
+		if (selected.Count == 0 || !selected.Contains(result))
+		{
+			vm.SelectResult(result, shift: false, ctrl: false);
+			selected = vm.GetSelectedResults();
+		}
+
 		var menu = new ContextMenu();
 		
-		var copy = new MenuItem { Header = "Copy ID" };
+		var copy = new MenuItem { Header = selected.Count > 1 ? $"Copy IDs ({selected.Count})" : "Copy ID" };
 		copy.Click += async (_, _) =>
 		{
 			var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-			if (clipboard != null) await clipboard.SetTextAsync(result.DisplayedId.ToString());
+			if (clipboard != null)
+			{
+				var ids = string.Join(", ", selected.Select(s => s.DisplayedId));
+				await clipboard.SetTextAsync(ids);
+			}
 		};
 		menu.Items.Add(copy);
 		menu.Items.Add(new Separator());
 
-		var export = new MenuItem { Header = "Export..." };
+		var export = new MenuItem { Header = selected.Count > 1 ? $"Export selected ({selected.Count})..." : "Export..." };
 		export.Click += (_, _) =>
 		{
 			if (vm.SourcePanel != null)
 			{
-				vm.SourcePanel.RequestExportThing(new ThingItemViewModel(result.Thing.Id, vm.SourcePanel));
+				var thingItems = selected.Select(s => new ThingItemViewModel(s.Thing.Id, vm.SourcePanel)).ToList();
+				vm.SourcePanel.RequestExportThings(thingItems);
 			}
 		};
 
-		var openNew = new MenuItem { Header = "Open in new window" };
+		var openNew = new MenuItem { Header = selected.Count > 1 ? $"Open in new windows ({selected.Count})" : "Open in new window" };
 		openNew.Click += async (_, _) =>
 		{
 			if (vm.SourcePanel != null)
 			{
-				await vm.Parent.OpenThingEditor(vm.SourcePanel, result.Thing.Id, newWindow: true, result.Thing.Kind);
+				foreach (var sel in selected)
+				{
+					await vm.Parent.OpenThingEditor(vm.SourcePanel, sel.Thing.Id, newWindow: true, sel.Thing.Kind);
+				}
 			}
 		};
 
