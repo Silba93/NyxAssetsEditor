@@ -394,7 +394,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					uint signature = 0;
 					try
 					{
-						using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+						using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
 						using (var br = new BinaryReader(fs))
 						{
 							if (fs.Length >= 4)

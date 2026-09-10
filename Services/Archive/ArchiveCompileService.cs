@@ -45,7 +45,9 @@ namespace NyxAssetsEditor.Services.Archive
 				return;
 
 			var backupPath = path + ".bak";
-			File.Copy(path, backupPath, true);
+			using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+			using var destination = new FileStream(backupPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+			source.CopyTo(destination);
 		}
 	}
 }

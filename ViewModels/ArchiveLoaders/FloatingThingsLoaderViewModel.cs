@@ -1299,7 +1299,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 				uint signature = 0;
 				try
 				{
-					using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read))
+					using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
 					using (var br = new System.IO.BinaryReader(fs))
 					{
 						if (fs.Length >= 4)
@@ -1425,7 +1425,7 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 					uint datSignature = 0;
 					try
 					{
-						using var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
+						using var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete);
 						using var br = new System.IO.BinaryReader(fs);
 						if (fs.Length >= 4)
 							datSignature = br.ReadUInt32();
