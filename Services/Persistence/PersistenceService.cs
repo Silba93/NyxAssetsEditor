@@ -66,6 +66,7 @@ namespace NyxAssetsEditor.Services.Persistence
 			public int UndoLimit { get; set; } = 10;
 			public bool AllowUnknownSignatures { get; set; } = true;
 			public bool CompileLinkedPairTogether { get; set; } = true;
+			public bool BackupArchivesBeforeCompile { get; set; } = false;
 			public bool ShowInformationBoxes { get; set; } = true;
 			public string CustomAccentColor { get; set; } = "";
 			public int DefaultSpritePanelWidth { get; set; } = 430;
@@ -221,6 +222,7 @@ namespace NyxAssetsEditor.Services.Persistence
 							model.LooktypeMountedRiderOffsetX,
 							model.LooktypeMountedRiderOffsetY,
 							model.CompileLinkedPairTogether,
+							model.BackupArchivesBeforeCompile,
 							model.CustomAccentColor,
 							model.ShowInformationBoxes,
 							model.DefaultSpritePanelWidth,
@@ -280,6 +282,7 @@ namespace NyxAssetsEditor.Services.Persistence
 					UndoLimit = SettingsViewModel.UndoLimit,
 					AllowUnknownSignatures = SettingsViewModel.AllowUnknownSignatures,
 					CompileLinkedPairTogether = SettingsViewModel.CompileLinkedPairTogether,
+					BackupArchivesBeforeCompile = SettingsViewModel.BackupArchivesBeforeCompile,
 					ShowInformationBoxes = SettingsViewModel.ShowInformationBoxes,
 					CustomAccentColor = SettingsViewModel.CustomAccentColor,
 					DefaultSpritePanelWidth = SettingsViewModel.DefaultSpritePanelWidth,

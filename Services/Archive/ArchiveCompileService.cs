@@ -41,7 +41,7 @@ namespace NyxAssetsEditor.Services.Archive
 
 		public static void BackupIfExists(string path)
 		{
-			if (!File.Exists(path))
+			if (!NyxAssetsEditor.ViewModels.Pages.SettingsViewModel.BackupArchivesBeforeCompile || !File.Exists(path))
 				return;
 
 			var backupPath = path + ".bak";

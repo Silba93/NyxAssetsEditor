@@ -143,6 +143,20 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 		}
 
+		private static bool _backupArchivesBeforeCompile = false;
+		public static bool BackupArchivesBeforeCompile
+		{
+			get => _backupArchivesBeforeCompile;
+			set
+			{
+				if (_backupArchivesBeforeCompile != value)
+				{
+					_backupArchivesBeforeCompile = value;
+					NyxAssetsEditor.Services.Persistence.PersistenceService.SaveSettings();
+				}
+			}
+		}
+
 		public static event Action? ShowInformationBoxesChanged;
 
 		private static bool _showInformationBoxes = true;
@@ -515,6 +529,19 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 		}
 
+		public bool BackupArchivesBeforeCompileSetting
+		{
+			get => BackupArchivesBeforeCompile;
+			set
+			{
+				if (BackupArchivesBeforeCompile != value)
+				{
+					BackupArchivesBeforeCompile = value;
+					OnPropertyChanged();
+				}
+			}
+		}
+
 		public bool ShowInformationBoxesSetting
 		{
 			get => ShowInformationBoxes;
@@ -857,6 +884,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			int looktypeMountedRiderOffsetX = 0,
 			int looktypeMountedRiderOffsetY = 0,
 			bool compileLinkedPairTogether = true,
+			bool backupArchivesBeforeCompile = false,
 			string? customAccentColor = null,
 			bool showInformationBoxes = true,
 			int defaultSpritePanelWidth = 430,
@@ -886,6 +914,7 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			_preloadGraphicalAssets = preloadGraphicalAssets;
 			_allowUnknownSignatures = allowUnknownSignatures;
 			_compileLinkedPairTogether = compileLinkedPairTogether;
+			_backupArchivesBeforeCompile = backupArchivesBeforeCompile;
 			_showInformationBoxes = showInformationBoxes;
 			_customAccentColor = customAccentColor ?? "";
 			ApplyAccentColor(_customAccentColor);
