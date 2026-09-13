@@ -237,6 +237,7 @@ public partial class FloatingThingFinderControl : UserControl
 		if (e.PropertyName == nameof(FloatingThingFinderViewModel.CurrentPage))
 		{
 			int newPage = _viewModel.CurrentPage;
+			if (newPage == _lastPage) return;
 			bool isBackwards = newPage < _lastPage;
 			_lastPage = newPage;
 
