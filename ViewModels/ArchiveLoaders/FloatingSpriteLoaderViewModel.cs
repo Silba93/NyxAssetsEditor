@@ -961,7 +961,10 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			var newSprite = PagedSprites.LastOrDefault();
 			if (newSprite != null)
+			{
 				SelectSprite(newSprite);
+				ScrollToItemRequested?.Invoke(newSprite);
+			}
 
 			EndSpriteTransaction(new[] { newId });
 		}

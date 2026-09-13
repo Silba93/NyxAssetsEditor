@@ -1800,6 +1800,13 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			RefreshAfterCatalogMutation(goToLastPage: !replaceExisting);
 
+			var importedItem = PagedThings.FirstOrDefault(t => t.Id == assignId);
+			if (importedItem != null)
+			{
+				SelectThing(importedItem);
+				ScrollToItemRequested?.Invoke(importedItem);
+			}
+
 			EndThingTransaction(new[] { (kind, assignId) });
 		}
 
@@ -1862,6 +1869,13 @@ namespace NyxAssetsEditor.ViewModels.ArchiveLoaders
 
 			TotalThings = (uint)_allThings.Count;
 			RefreshAfterCatalogMutation(goToLastPage: true);
+
+			var lastCreated = PagedThings.LastOrDefault();
+			if (lastCreated != null)
+			{
+				SelectThing(lastCreated);
+				ScrollToItemRequested?.Invoke(lastCreated);
+			}
 
 			EndThingTransaction(createdThings);
 		}
