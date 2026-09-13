@@ -19,15 +19,8 @@
 		<Style Selector="Border.result-tile">
 			<Setter Property="BorderBrush" Value="#353535"/><Setter Property="BorderThickness" Value="1"/>
 		</Style>
-		<Style Selector="Border.result-tile.selected">
-			<Setter Property="BorderBrush" Value="#5E94FF"/>
-			<Setter Property="BorderThickness" Value="2"/>
-		</Style>
 		<Style Selector="Border.result-list-row">
 			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-		<Style Selector="Border.result-list-row.selected">
-			<Setter Property="Background" Value="#225E94FF"/>
 		</Style>
 		<Style Selector="TextBlock.label"><Setter Property="Foreground" Value="#999"/><Setter Property="FontSize" Value="11"/></Style>
 	</UserControl.Styles>
@@ -225,7 +218,7 @@
 						<Border Grid.Row="0" BorderBrush="#383838" BorderThickness="0,0,0,1" Padding="12,8">
 							<TextBlock Text="{Binding ResultCount, StringFormat='{}{0} results'}" Foreground="#AAA" FontSize="11"/>
 						</Border>
-						<ListBox Grid.Row="1" ItemsSource="{Binding PagedResults}" Background="Transparent" BorderThickness="0" Padding="0"
+						<ListBox x:Name="ResultListListBox" Grid.Row="1" ItemsSource="{Binding PagedResults}" Background="Transparent" BorderThickness="0" Padding="0"
 							SelectionMode="Multiple"
 							IsVisible="{Binding ShowListViewContent}">
 							<ListBox.ItemsPanel>
@@ -265,7 +258,7 @@
 							</ListBox.ItemTemplate>
 						</ListBox>
 
-						<ListBox Grid.Row="1" ItemsSource="{Binding PagedResults}" Background="Transparent" BorderThickness="0" Padding="8"
+						<ListBox x:Name="ResultGridListBox" Grid.Row="1" ItemsSource="{Binding PagedResults}" Background="Transparent" BorderThickness="0" Padding="8"
 							SelectionMode="Multiple"
 							IsVisible="{Binding ShowGridViewContent}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 							<ListBox.ItemsPanel>

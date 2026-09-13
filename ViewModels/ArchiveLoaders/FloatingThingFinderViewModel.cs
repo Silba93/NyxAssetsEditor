@@ -278,7 +278,10 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 					}
 				}
 			}
-			_currentPage = 1;
+			if (oldPanel != newPanel)
+			{
+				_currentPage = 1;
+			}
 			ScheduleFilter();
 		}
 	}
