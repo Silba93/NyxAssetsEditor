@@ -253,12 +253,15 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 			if (newPanel != null)
 			{
 				newPanel.CatalogChanged += OnSourceCatalogChanged;
-				_selectedKind = newPanel.SelectedSection;
-				OnPropertyChanged(nameof(SelectedKind));
-				OnPropertyChanged(nameof(IsItemsKind));
-				OnPropertyChanged(nameof(IsOutfitsKind));
-				OnPropertyChanged(nameof(IsEffectsKind));
-				OnPropertyChanged(nameof(IsMissilesKind));
+				if (oldPanel != newPanel)
+				{
+					_selectedKind = newPanel.SelectedSection;
+					OnPropertyChanged(nameof(SelectedKind));
+					OnPropertyChanged(nameof(IsItemsKind));
+					OnPropertyChanged(nameof(IsOutfitsKind));
+					OnPropertyChanged(nameof(IsEffectsKind));
+					OnPropertyChanged(nameof(IsMissilesKind));
+				}
 				RefreshExtraPropertyKeys();
 				LoadFields();
 
@@ -278,7 +281,7 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 					}
 				}
 			}
-			if (oldPanel != newPanel)
+			if (oldPanel != null && newPanel != null && !ReferenceEquals(oldPanel, newPanel))
 			{
 				_currentPage = 1;
 			}
@@ -290,11 +293,41 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	{
 		var currentSprite = preferredSpritePath ?? SelectedArchivePair?.SpritePath;
 		var currentThings = preferredThingsPath ?? SelectedArchivePair?.ThingsPath;
+		var savedPage = _currentPage;
+		var savedKind = _selectedKind;
+		var pairs = _parent.GetCompilePairs().ToList();
+
+		// Check if the list of compile pairs actually changed
+		bool samePairs = ArchivePairs.Count == pairs.Count;
+		if (samePairs)
+		{
+			for (int i = 0; i < pairs.Count; i++)
+			{
+				if (!string.Equals(ArchivePairs[i].SpritePath, pairs[i].SpritePanel.FilePath, StringComparison.OrdinalIgnoreCase) ||
+					!string.Equals(ArchivePairs[i].ThingsPath, pairs[i].ThingsPanel.FilePath, StringComparison.OrdinalIgnoreCase))
+				{
+					samePairs = false;
+					break;
+				}
+			}
+		}
+
+		if (samePairs && SelectedArchivePair != null)
+		{
+			return;
+		}
+
 		ArchivePairs.Clear();
-		foreach (var pair in _parent.GetCompilePairs()) ArchivePairs.Add(new LooktypeArchivePairViewModel(pair));
+		foreach (var pair in pairs) ArchivePairs.Add(new LooktypeArchivePairViewModel(pair));
 		SelectedArchivePair = ArchivePairs.FirstOrDefault(p =>
 			string.Equals(p.SpritePath, currentSprite, StringComparison.OrdinalIgnoreCase) && string.Equals(p.ThingsPath, currentThings, StringComparison.OrdinalIgnoreCase))
 			?? ArchivePairs.FirstOrDefault();
+
+		if (SelectedArchivePair != null)
+		{
+			_selectedKind = savedKind;
+			_currentPage = savedPage;
+		}
 	}
 
 	[ObservableProperty]
