@@ -52,6 +52,8 @@ public sealed class FloatingPanelInteraction
 			bottomBar.PointerMoved += OnTitleBarPointerMoved;
 			bottomBar.PointerReleased += OnTitleBarPointerReleased;
 		}
+
+		SetupScrollButtons();
 	}
 
 	public void RegisterResizeHandle(Border handle, int direction)
@@ -316,4 +318,106 @@ public sealed class FloatingPanelInteraction
 
 		return null;
 	}
+
+	private void SetupScrollButtons()
+	{
+		_host.Loaded += (_, _) =>
+		{
+			if (_host is not FloatingThingsLoaderControl && _host is not FloatingSpriteLoaderControl)
+				return;
+
+			// Find outer container grid inside Host (typically child of main Border)
+			var rootGrid = _host.FindDescendantOfType<Border>()?.Child as Grid ?? _host.Content as Grid ?? _host.FindDescendantOfType<Grid>();
+			if (rootGrid == null) return;
+
+			var btnUp = new Button
+			{
+				Width = 26,
+				Height = 26,
+				Padding = new Thickness(0),
+				Background = Avalonia.Media.Brush.Parse("#2D2D2D"),
+				BorderBrush = Avalonia.Media.Brush.Parse("#444444"),
+				BorderThickness = new Thickness(1),
+				CornerRadius = new CornerRadius(13),
+				Content = new Avalonia.Controls.Image
+				{
+					Source = new Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri("avares://NyxAssetsEditor/Assets/Icons/arrow_m_up.png"))),
+					Width = 12,
+					Height = 12,
+					HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+					VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+				}
+			};
+			ToolTip.SetTip(btnUp, "Scroll To Top");
+
+			var btnDown = new Button
+			{
+				Width = 26,
+				Height = 26,
+				Padding = new Thickness(0),
+				Background = Avalonia.Media.Brush.Parse("#2D2D2D"),
+				BorderBrush = Avalonia.Media.Brush.Parse("#444444"),
+				BorderThickness = new Thickness(1),
+				CornerRadius = new CornerRadius(13),
+				Content = new Avalonia.Controls.Image
+				{
+					Source = new Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri("avares://NyxAssetsEditor/Assets/Icons/arrow_m_down.png"))),
+					Width = 12,
+					Height = 12,
+					HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+					VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+				}
+			};
+			ToolTip.SetTip(btnDown, "Scroll To Bottom");
+
+			btnUp.Click += (_, _) => PerformInstantScroll(toTop: true);
+			btnDown.Click += (_, _) => PerformInstantScroll(toTop: false);
+
+			var container = new Canvas
+			{
+				HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+				VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
+				IsHitTestVisible = true,
+				ZIndex = 80
+			};
+
+			var stack = new StackPanel
+			{
+				Orientation = Avalonia.Layout.Orientation.Vertical,
+				Spacing = 4,
+				Children = { btnUp, btnDown }
+			};
+
+			Canvas.SetLeft(stack, 8);
+			Canvas.SetBottom(stack, 78);
+
+			container.Children.Add(stack);
+
+			if (rootGrid is Grid g)
+			{
+				if (g.RowDefinitions.Count > 0)
+					Grid.SetRowSpan(container, Math.Max(1, g.RowDefinitions.Count));
+				if (g.ColumnDefinitions.Count > 0)
+					Grid.SetColumnSpan(container, Math.Max(1, g.ColumnDefinitions.Count));
+			}
+
+			rootGrid.Children.Add(container);
+		};
+	}
+
+	private void PerformInstantScroll(bool toTop)
+	{
+		var scrollViewer = _host.FindDescendantOfType<ScrollViewer>();
+		if (scrollViewer == null) return;
+
+		if (toTop)
+		{
+			scrollViewer.Offset = new Vector(scrollViewer.Offset.X, 0);
+		}
+		else
+		{
+			scrollViewer.Offset = new Vector(scrollViewer.Offset.X, scrollViewer.Extent.Height);
+		}
+	}
 }
+
