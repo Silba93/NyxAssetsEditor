@@ -14,9 +14,9 @@ Rotatable = { id = 0x15, label = "Rotatable", description = "Can be rotated usin
 IsLyingObject = { id = 0x1B, label = "Lying Object", description = "Renders object flat on the ground plane without height layer." }
 IsFullGround = { id = 0x1F, label = "Full Ground", description = "Covers entire tile area as solid opaque ground surface." }
 NoMoveAnimation = { id = 0x10, label = "No Move Animation", description = "Suppresses movement interpolation frame animation when moved." }
-Hangable = { id = 0x12, label = "Hangable", description = "Can be hung on wall surfaces." }
-IsHorizontal = { id = 0x14, label = "Hook East", description = "Snaps to east-facing wall hook surface." }
-IsVertical = { id = 0x13, label = "Hook South", description = "Snaps to south-facing wall hook surface." }
+Hangable = { id = 0x12, label = "Hangable", description = "Can be hung on walls. Requires wall tile with Hook East / Hook South to resolve orientation frame (xPattern)." }
+IsHorizontal = { id = 0x14, label = "Hook East", description = "Hook East wall attribute. Tells client to select East-facing sprite frame (xPattern 2) for Hangable items on this tile." }
+IsVertical = { id = 0x13, label = "Hook South", description = "Hook South wall attribute. Tells client to select South-facing sprite frame (xPattern 1) for Hangable items on this tile." }
 DontHide = { id = 0x17, label = "Don't Hide", description = "Prevents creature/item occlusion fading when behind objects." }
 IsTranslucent = { id = 0x18, label = "Translucent", description = "Renders with alpha transparency / semi-translucent effect." }
 IgnoreLook = { id = 0x20, label = "Ignore Look", description = "Prevents inspection or look action when targeted." }

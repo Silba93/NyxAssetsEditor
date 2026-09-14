@@ -707,7 +707,7 @@ locked = true
 
 [flag.hangable]
 label = "Hangable"
-description = "Can be hung on wall surfaces."
+description = "Can be hung on walls. Requires wall tile with Hook East / Hook South to resolve orientation frame (xPattern)."
 type = "bool"
 group = "interaction"
 locked = true
@@ -951,14 +951,14 @@ order = 5
 # --- Rendering & Visual Hooks ---
 [flag.isHorizontal]
 label = "Hook East"
-description = "Snaps to east-facing wall hook surface."
+description = "Hook East wall attribute. Tells client to select East-facing sprite frame (xPattern 2) for Hangable items on this tile."
 type = "bool"
 group = "rendering"
 locked = true
 
 [flag.isVertical]
 label = "Hook South"
-description = "Snaps to south-facing wall hook surface."
+description = "Hook South wall attribute. Tells client to select South-facing sprite frame (xPattern 1) for Hangable items on this tile."
 type = "bool"
 group = "rendering"
 locked = true
