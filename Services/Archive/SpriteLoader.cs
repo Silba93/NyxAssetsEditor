@@ -180,13 +180,28 @@ public class SpriteLoader : IDisposable
         using var ms = new MemoryStream();
         _archive_spr.WriteToStream(ms);
 
-        // Release the file lock before writing to the same path
-        _archive_spr.Dispose();
-        _archive_spr = null;
-
-        using var output = File.Create(path);
-        ms.Position = 0;
-        ms.CopyTo(output);
+        // Write to .tmp first (different filename, so the MMF lock on 'path' doesn't block it).
+        // Only dispose the archive after the write succeeds — that way if the write throws,
+        // the in-memory archive is still alive and functional.
+        // On success, File.Move renames .tmp into place atomically — no leftover file.
+        var tmp = path + ".tmp";
+        try
+        {
+            using (var output = File.Create(tmp))
+            {
+                ms.Position = 0;
+                ms.CopyTo(output);
+            }
+            // Release the file lock right before the move
+            _archive_spr.Dispose();
+            _archive_spr = null;
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tmp); } catch { /* best-effort */ }
+            throw;
+        }
     }
 
     public void WriteAssetsTo(string path, int compressionLevel = 3, uint spritesPerPage = 2048)
@@ -197,13 +212,23 @@ public class SpriteLoader : IDisposable
         using var ms = new MemoryStream();
         _archive_assets.WriteToStream(ms);
 
-        // Release the file lock before writing to the same path
-        _archive_assets.Dispose();
-        _archive_assets = null;
-
-        using var output = File.Create(path);
-        ms.Position = 0;
-        ms.CopyTo(output);
+        var tmp = path + ".tmp";
+        try
+        {
+            using (var output = File.Create(tmp))
+            {
+                ms.Position = 0;
+                ms.CopyTo(output);
+            }
+            _archive_assets.Dispose();
+            _archive_assets = null;
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tmp); } catch { /* best-effort */ }
+            throw;
+        }
     }
 
     public void WriteSprSnapshotTo(string path)
@@ -214,9 +239,23 @@ public class SpriteLoader : IDisposable
         using var ms = new MemoryStream();
         _archive_spr.WriteToStream(ms);
 
-        using var output = File.Create(path);
-        ms.Position = 0;
-        ms.CopyTo(output);
+        // Snapshot does NOT dispose the archive (keeps it open for continued use),
+        // so write via temp file to avoid write-deny from the live MMF handle.
+        var tmp = path + ".tmp";
+        try
+        {
+            using (var output = File.Create(tmp))
+            {
+                ms.Position = 0;
+                ms.CopyTo(output);
+            }
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tmp); } catch { /* best-effort */ }
+            throw;
+        }
     }
 
     public void WriteAssetsSnapshotTo(string path)
@@ -227,9 +266,21 @@ public class SpriteLoader : IDisposable
         using var ms = new MemoryStream();
         _archive_assets.WriteToStream(ms);
 
-        using var output = File.Create(path);
-        ms.Position = 0;
-        ms.CopyTo(output);
+        var tmp = path + ".tmp";
+        try
+        {
+            using (var output = File.Create(tmp))
+            {
+                ms.Position = 0;
+                ms.CopyTo(output);
+            }
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tmp); } catch { /* best-effort */ }
+            throw;
+        }
     }
 
     public bool RemoveSprite(uint spriteId)
