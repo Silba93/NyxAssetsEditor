@@ -24,8 +24,9 @@
 			</Border>
 
 			<Border Padding="20,20,20,10">
-				<TextBlock Name="MessageText" Text=""
-						   Foreground="#CCCCCC" FontSize="13" TextWrapping="Wrap" FontFamily="Consolas,Courier New,monospace"/>
+				<ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+					<StackPanel Name="MessageContainer" Spacing="4"/>
+				</ScrollViewer>
 			</Border>
 
 			<Border Padding="20,10,20,20">

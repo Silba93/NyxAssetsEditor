@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -185,5 +186,33 @@ public partial class FloatingCompileViewModel : PanelViewModelBase
 		{
 			StatusMessage = $"Compile As failed: {ex.Message}";
 		}
+	}
+
+	public event EventHandler<string>? RequestShowInfo;
+
+	[RelayCommand]
+	private void ShowCompileInfo()
+	{
+		if (SelectedArchivePair == null) return;
+		var pair = SelectedArchivePair.Pair;
+
+		var lines = new List<string>
+		{
+			"--- Active Archives Info ---",
+			$"Sprite Archive: {pair.SpritePanel.FilePath}",
+			$"  Added ({pair.SpritePanel.AddedSpriteIds.Count})" + (pair.SpritePanel.AddedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.AddedSpriteIds)}" : ""),
+			$"  Modified ({pair.SpritePanel.ModifiedSpriteIds.Count})" + (pair.SpritePanel.ModifiedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.ModifiedSpriteIds)}" : ""),
+			$"  Removed ({pair.SpritePanel.RemovedSpriteIds.Count})" + (pair.SpritePanel.RemovedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.RemovedSpriteIds)}" : ""),
+			$"  Has Unsaved Changes: {(pair.SpritePanel.HasSavedChanges ? "Yes" : "No")}",
+			"",
+			$"Things Archive: {pair.ThingsPanel.FilePath}",
+			$"  Added ({pair.ThingsPanel.AddedThingIds.Count})" + (pair.ThingsPanel.AddedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.AddedThingIds)}" : ""),
+			$"  Modified ({pair.ThingsPanel.ModifiedThingIds.Count})" + (pair.ThingsPanel.ModifiedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.ModifiedThingIds)}" : ""),
+			$"  Removed ({pair.ThingsPanel.RemovedThingIds.Count})" + (pair.ThingsPanel.RemovedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.RemovedThingIds)}" : ""),
+			$"  Has Unsaved Changes: {(pair.ThingsPanel.HasSavedChanges ? "Yes" : "No")}",
+		};
+
+		var info = string.Join(Environment.NewLine, lines);
+		RequestShowInfo?.Invoke(this, info);
 	}
 }

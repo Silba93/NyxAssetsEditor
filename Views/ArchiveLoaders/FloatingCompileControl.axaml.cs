@@ -26,7 +26,15 @@ public partial class FloatingCompileControl : UserControl
 		if (DataContext is FloatingCompileViewModel vm)
 		{
 			vm.RequestSavePathHandler = ShowSaveFileDialogAsync;
+			vm.RequestShowInfo += OnShowInfoRequested;
 		}
+	}
+
+	private async void OnShowInfoRequested(object? sender, string message)
+	{
+		var window = TopLevel.GetTopLevel(this) as Window ?? this.VisualRoot as Window;
+		if (window == null) return;
+		await new NyxAssetsEditor.Views.Shell.InfoDialog("Compilation & Changes Info", message).ShowDialog(window);
 	}
 
 	private async Task<string?> ShowSaveFileDialogAsync(string suggestedFileName, string extension)

@@ -57,6 +57,34 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			set => _lastActivePair = value;
 		}
 
+		public event EventHandler<string>? RequestShowInfo;
+
+		[RelayCommand]
+		private void ShowCompileInfo()
+		{
+			var pair = LastActivePair ?? GetCompilePairs().FirstOrDefault();
+			if (pair == null) return;
+
+			var lines = new List<string>
+			{
+				"--- Active Archives Info ---",
+				$"Sprite Archive: {pair.SpritePanel.FilePath}",
+				$"  Added ({pair.SpritePanel.AddedSpriteIds.Count})" + (pair.SpritePanel.AddedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.AddedSpriteIds)}" : ""),
+				$"  Modified ({pair.SpritePanel.ModifiedSpriteIds.Count})" + (pair.SpritePanel.ModifiedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.ModifiedSpriteIds)}" : ""),
+				$"  Removed ({pair.SpritePanel.RemovedSpriteIds.Count})" + (pair.SpritePanel.RemovedSpriteIds.Count > 0 ? $": {string.Join(", ", pair.SpritePanel.RemovedSpriteIds)}" : ""),
+				$"  Has Unsaved Changes: {(pair.SpritePanel.HasSavedChanges ? "Yes" : "No")}",
+				"",
+				$"Things Archive: {pair.ThingsPanel.FilePath}",
+				$"  Added ({pair.ThingsPanel.AddedThingIds.Count})" + (pair.ThingsPanel.AddedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.AddedThingIds)}" : ""),
+				$"  Modified ({pair.ThingsPanel.ModifiedThingIds.Count})" + (pair.ThingsPanel.ModifiedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.ModifiedThingIds)}" : ""),
+				$"  Removed ({pair.ThingsPanel.RemovedThingIds.Count})" + (pair.ThingsPanel.RemovedThingIds.Count > 0 ? $": {string.Join(", ", pair.ThingsPanel.RemovedThingIds)}" : ""),
+				$"  Has Unsaved Changes: {(pair.ThingsPanel.HasSavedChanges ? "Yes" : "No")}",
+			};
+
+			var info = string.Join(Environment.NewLine, lines);
+			RequestShowInfo?.Invoke(this, info);
+		}
+
 		public System.Collections.Generic.IReadOnlyList<LinkedArchivePair> GetCompilePairs()
 		{
 			var pairs = new System.Collections.Generic.List<LinkedArchivePair>();

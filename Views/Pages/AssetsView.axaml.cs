@@ -27,6 +27,7 @@ namespace NyxAssetsEditor.Views.Pages
 				_viewModel.PositionReplacerHandler = null;
 				_viewModel.PositionSlicerHandler = null;
 				_viewModel.BringPanelToFrontHandler = null;
+				_viewModel.RequestShowInfo -= OnShowInfoRequested;
 			}
 
 			_viewModel = DataContext as AssetsViewModel;
@@ -38,7 +39,15 @@ namespace NyxAssetsEditor.Views.Pages
 				_viewModel.PositionReplacerHandler = PositionAndOpenReplacer;
 				_viewModel.PositionSlicerHandler = PositionAndOpenSlicer;
 				_viewModel.BringPanelToFrontHandler = FloatingPanelsHost.BringToFront;
+				_viewModel.RequestShowInfo += OnShowInfoRequested;
 			}
+		}
+
+		private async void OnShowInfoRequested(object? sender, string message)
+		{
+			var window = TopLevel.GetTopLevel(this) as Window ?? this.VisualRoot as Window;
+			if (window == null) return;
+			await new NyxAssetsEditor.Views.Shell.InfoDialog("Compilation & Changes Info", message).ShowDialog(window);
 		}
 
 		private async Task ShowCompileAsDialogAsync()
