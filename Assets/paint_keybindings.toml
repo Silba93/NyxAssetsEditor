@@ -1,0 +1,11 @@
+# Paint Tool Keybindings Configuration
+
+[keybindings]
+brush = ["B"]
+eraser = ["E"]
+picker = ["I", "P"]
+bucket = ["G", "F"]
+wand = ["W"]
+select = ["S"]
+move = ["M"]
+rotate = ["R"]

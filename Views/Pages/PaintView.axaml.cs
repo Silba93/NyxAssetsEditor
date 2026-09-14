@@ -31,6 +31,104 @@ namespace NyxAssetsEditor.Views.Pages
 			InitializeComponent();
 		}
 
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			base.OnKeyDown(e);
+			if (e.Handled) return;
+
+			// Do not intercept if user is typing in a TextBox or NumericUpDown
+			if (e.Source is Visual source)
+			{
+				Visual? current = source;
+				while (current != null && current != this)
+				{
+					if (current is TextBox or NumericUpDown)
+						return;
+					current = current.GetVisualParent();
+				}
+			}
+
+			if (DataContext is not PaintViewModel vm)
+				return;
+
+			if (_keybindings == null)
+				LoadKeybindings();
+
+			if (_keybindings != null && _keybindings.TryGetValue(e.Key, out var tool))
+			{
+				vm.ActiveTool = tool;
+				e.Handled = true;
+			}
+		}
+
+		private static Dictionary<Key, PaintTool>? _keybindings;
+
+		private static void LoadKeybindings()
+		{
+			_keybindings = new Dictionary<Key, PaintTool>();
+			try
+			{
+				string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "paint_keybindings.toml");
+				string toml = "";
+				if (System.IO.File.Exists(path))
+				{
+					toml = System.IO.File.ReadAllText(path);
+				}
+				else
+				{
+					using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://NyxAssetsEditor/Assets/paint_keybindings.toml"));
+					using var reader = new System.IO.StreamReader(stream);
+					toml = reader.ReadToEnd();
+				}
+
+				var model = Tomlyn.TomlSerializer.Deserialize<KeybindingsRootTomlModel>(toml);
+				if (model?.keybindings != null)
+				{
+					RegisterToolKeys(model.keybindings.brush, PaintTool.Brush);
+					RegisterToolKeys(model.keybindings.eraser, PaintTool.Eraser);
+					RegisterToolKeys(model.keybindings.picker, PaintTool.Picker);
+					RegisterToolKeys(model.keybindings.bucket, PaintTool.Bucket);
+					RegisterToolKeys(model.keybindings.wand, PaintTool.Wand);
+					RegisterToolKeys(model.keybindings.select, PaintTool.Select);
+					RegisterToolKeys(model.keybindings.move, PaintTool.Move);
+					RegisterToolKeys(model.keybindings.rotate, PaintTool.Rotate);
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Failed to load paint keybindings: {ex.Message}");
+			}
+		}
+
+		private static void RegisterToolKeys(List<string>? keys, PaintTool tool)
+		{
+			if (keys == null || _keybindings == null) return;
+			foreach (var k in keys)
+			{
+				if (Enum.TryParse<Key>(k, true, out var parsedKey))
+				{
+					_keybindings[parsedKey] = tool;
+				}
+			}
+		}
+
+		private class KeybindingsRootTomlModel
+		{
+			public KeybindingsMapTomlModel? keybindings { get; set; }
+		}
+
+		private class KeybindingsMapTomlModel
+		{
+			public List<string>? brush { get; set; }
+			public List<string>? eraser { get; set; }
+			public List<string>? picker { get; set; }
+			public List<string>? bucket { get; set; }
+			public List<string>? wand { get; set; }
+			public List<string>? select { get; set; }
+			public List<string>? move { get; set; }
+			public List<string>? rotate { get; set; }
+		}
+
 		private void OnCanvasPointerPressed(object sender, PointerPressedEventArgs e)
 		{
 			var props = e.GetCurrentPoint(this).Properties;

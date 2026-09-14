@@ -8,6 +8,7 @@
 			mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
 			x:Class="NyxAssetsEditor.Views.Pages.PaintView"
 			x:DataType="vm:PaintViewModel"
+			Focusable="True"
 			Background="#141414">
 
 	<UserControl.Styles>
@@ -40,52 +41,52 @@
 
 				<!-- Tool Selection -->
 				<StackPanel Grid.Row="1" Spacing="8">
-					<RadioButton IsChecked="{Binding IsSelectActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsSelectActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Selection (S)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/select.png" Width="14" Height="14"/>
-							<TextBlock Text="Selection" VerticalAlignment="Center"/>
+							<TextBlock Text="Selection (S)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsMoveActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsMoveActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Move Layer (M)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/action_drag.png" Width="14" Height="14"/>
-							<TextBlock Text="Move Layer" VerticalAlignment="Center"/>
+							<TextBlock Text="Move Layer (M)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsBrushActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsBrushActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Brush (B)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/pencil.png" Width="14" Height="14"/>
-							<TextBlock Text="Brush (Pencil)" VerticalAlignment="Center"/>
+							<TextBlock Text="Brush (B)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsEraserActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsEraserActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Eraser (E)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/eraser.png" Width="14" Height="14"/>
-							<TextBlock Text="Eraser" VerticalAlignment="Center"/>
+							<TextBlock Text="Eraser (E)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsPickerActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsPickerActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Color Picker (I / P)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/eyedropper.png" Width="14" Height="14"/>
-							<TextBlock Text="Color Picker" VerticalAlignment="Center"/>
+							<TextBlock Text="Color Picker (I)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsBucketActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsBucketActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Fill Bucket (G / F)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/bucket.png" Width="14" Height="14"/>
-							<TextBlock Text="Fill Bucket" VerticalAlignment="Center"/>
+							<TextBlock Text="Fill Bucket (G)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsWandActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsWandActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Magic Wand (W)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/wand.png" Width="14" Height="14"/>
-							<TextBlock Text="Magic Wand" VerticalAlignment="Center"/>
+							<TextBlock Text="Magic Wand (W)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
-					<RadioButton IsChecked="{Binding IsRotateActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<RadioButton IsChecked="{Binding IsRotateActive}" Theme="{StaticResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Rotate Tool (R)">
 						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 							<Image Source="/Assets/Icons/paint/transparency_state.png" Width="14" Height="14"/>
-							<TextBlock Text="Rotate Tool" VerticalAlignment="Center"/>
+							<TextBlock Text="Rotate Tool (R)" VerticalAlignment="Center"/>
 						</StackPanel>
 					</RadioButton>
 				</StackPanel>
