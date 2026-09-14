@@ -20,6 +20,7 @@ public sealed class ThingAppearanceOptions
 	public bool ShowGrid { get; init; }
 	public bool ShowDragGrid { get; init; }
 	public bool ShowCropSize { get; init; }
+	public bool ShowAllLayers { get; init; }
 	public (int X, int Y, int Width, int Height)? HighlightRect { get; init; }
 	public SKColor GridColor { get; init; } = new(80, 80, 80, 180);
 	public int GridLineWidth { get; init; } = 1;
@@ -90,6 +91,7 @@ public static class ThingAppearanceRenderer
 					PatternZ = options.PatternZ,
 					ShowGrid = false,
 					ShowCropSize = false,
+					ShowAllLayers = options.ShowAllLayers,
 				};
 				var offsetX = (int)(px * cellW);
 				var offsetY = (int)(py * cellH);
@@ -154,6 +156,7 @@ public static class ThingAppearanceRenderer
 				PatternZ = options.PatternZ,
 				ShowGrid = false,
 				ShowCropSize = false,
+				ShowAllLayers = options.ShowAllLayers,
 			};
 			var offsetX = column * cellW;
 			var offsetY = row * cellH;
@@ -223,6 +226,7 @@ public static class ThingAppearanceRenderer
 				PatternZ = options.PatternZ,
 				ShowGrid = false,
 				ShowCropSize = false,
+				ShowAllLayers = options.ShowAllLayers,
 			};
 			var offsetX = column * cellW;
 			var offsetY = row * cellH;
@@ -289,6 +293,7 @@ public static class ThingAppearanceRenderer
 				PatternZ = options.PatternZ,
 				ShowGrid = false,
 				ShowCropSize = false,
+				ShowAllLayers = options.ShowAllLayers,
 			};
 			var offsetX = (int)(f * cellW);
 			var offsetY = 0;
@@ -473,30 +478,34 @@ public static class ThingAppearanceRenderer
 	{
 		var edge = SpritePixelCodec.SpriteEdgeLength;
 		var drewAny = false;
-		var layer = options.Layer;
+		var startLayer = options.ShowAllLayers ? 0 : options.Layer;
+		var endLayer = options.ShowAllLayers ? (int)fg.Layers - 1 : options.Layer;
 
-		for (uint innerW = 0; innerW < fg.Width; innerW++)
+		for (var l = startLayer; l <= endLayer; l++)
 		{
-			for (uint innerH = 0; innerH < fg.Height; innerH++)
+			for (uint innerW = 0; innerW < fg.Width; innerW++)
 			{
-				if (!fg.TryGetSpriteId(innerW, innerH, (uint)layer, options.PatternX, options.PatternY, options.PatternZ, (uint)options.Frame, out var spriteId)
-				    || spriteId == 0)
-					continue;
-
-				byte[] pixels;
-				try
+				for (uint innerH = 0; innerH < fg.Height; innerH++)
 				{
-					pixels = loader.LoadSpritePixels(spriteId);
-				}
-				catch
-				{
-					continue;
-				}
+					if (!fg.TryGetSpriteId(innerW, innerH, (uint)l, options.PatternX, options.PatternY, options.PatternZ, (uint)options.Frame, out var spriteId)
+					    || spriteId == 0)
+						continue;
 
-				var innerX = offsetX + (int)((fg.Width - innerW - 1) * edge);
-				var innerY = offsetY + (int)((fg.Height - innerH - 1) * edge);
-				BlitSpriteBuffer(canvas, canvasW, canvasH, innerX, innerY, pixels);
-				drewAny = true;
+					byte[] pixels;
+					try
+					{
+						pixels = loader.LoadSpritePixels(spriteId);
+					}
+					catch
+					{
+						continue;
+					}
+
+					var innerX = offsetX + (int)((fg.Width - innerW - 1) * edge);
+					var innerY = offsetY + (int)((fg.Height - innerH - 1) * edge);
+					BlitSpriteBuffer(canvas, canvasW, canvasH, innerX, innerY, pixels);
+					drewAny = true;
+				}
 			}
 		}
 

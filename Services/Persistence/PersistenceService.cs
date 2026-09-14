@@ -78,6 +78,8 @@ namespace NyxAssetsEditor.Services.Persistence
 			public bool AddonDuplicateFrameEnabled { get; set; } = false;
 			public bool AddonRotateCloneDirectionEnabled { get; set; } = false;
 			public bool AllowRelocatingDirection { get; set; } = false;
+			public bool ShowAllLayersOptionEnabled { get; set; } = false;
+			public bool ShowViewerScrollArrowsEnabled { get; set; } = false;
 			public string DefaultLaunchSection { get; set; } = "Home";
 			public string LastAssetExportFormat { get; set; } = "png";
 			public string LastAssetExportDirectory { get; set; } = "";
@@ -234,6 +236,8 @@ namespace NyxAssetsEditor.Services.Persistence
 							model.AddonDuplicateFrameEnabled,
 							model.AddonRotateCloneDirectionEnabled,
 							model.AllowRelocatingDirection,
+							model.ShowAllLayersOptionEnabled,
+							model.ShowViewerScrollArrowsEnabled,
 							System.Enum.TryParse<SettingsViewModel.LaunchSection>(model.DefaultLaunchSection, true, out var section) ? section : SettingsViewModel.LaunchSection.Home,
 							model.LastAssetExportFormat,
 							model.LastAssetExportDirectory,
@@ -294,6 +298,8 @@ namespace NyxAssetsEditor.Services.Persistence
 					AddonDuplicateFrameEnabled = SettingsViewModel.AddonDuplicateFrameEnabled,
 					AddonRotateCloneDirectionEnabled = SettingsViewModel.AddonRotateCloneDirectionEnabled,
 					AllowRelocatingDirection = SettingsViewModel.AllowRelocatingDirection,
+					ShowAllLayersOptionEnabled = SettingsViewModel.ShowAllLayersOptionEnabled,
+					ShowViewerScrollArrowsEnabled = SettingsViewModel.ShowViewerScrollArrowsEnabled,
 					DefaultLaunchSection = SettingsViewModel.DefaultLaunchSection.ToString(),
 					LastAssetExportFormat = SettingsViewModel.LastAssetExportFormat,
 					LastAssetExportDirectory = SettingsViewModel.LastAssetExportDirectory,

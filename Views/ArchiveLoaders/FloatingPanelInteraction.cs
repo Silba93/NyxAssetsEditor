@@ -381,6 +381,13 @@ public sealed class FloatingPanelInteraction
 				ZIndex = 80
 			};
 
+			void UpdateScrollButtonsVisibility()
+			{
+				container.IsVisible = SettingsViewModel.ShowViewerScrollArrowsEnabled;
+			}
+			UpdateScrollButtonsVisibility();
+			SettingsViewModel.AddonSettingsChanged += UpdateScrollButtonsVisibility;
+
 			var stack = new StackPanel
 			{
 				Orientation = Avalonia.Layout.Orientation.Vertical,

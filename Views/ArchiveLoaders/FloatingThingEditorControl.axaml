@@ -280,6 +280,7 @@
 										</Grid>
 
 										<StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right" Margin="0,2,0,0">
+											<ToggleSwitch Content="Show all layers" ToolTip.Tip="Render all layers combined" IsChecked="{Binding ShowAllLayers}" IsVisible="{Binding ShowAllLayersOptionVisible}" OnContent="" OffContent="" FontSize="11"/>
 											<ToggleSwitch Content="Show exact size" ToolTip.Tip="Show exact size (Crop Size)" IsChecked="{Binding ShowCropSize}" OnContent="" OffContent="" FontSize="11"/>
 											<ToggleSwitch Content="Show grid" IsChecked="{Binding ShowGrid}" OnContent="" OffContent="" FontSize="11"/>
 										</StackPanel>

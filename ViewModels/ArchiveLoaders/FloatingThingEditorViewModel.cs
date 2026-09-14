@@ -51,6 +51,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 	private Direction8 _missileDirection = Direction8.South;
 	private bool _showGrid;
 	private bool _showCropSize;
+	private bool _showAllLayers;
 	private int _selectedAnimationMode;
 	private bool _isPingPongStrategy;
 	private ThingType _thing = null!;
@@ -904,10 +905,13 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 
 	private void OnAppearanceSettingsChanged() => RefreshAppearance();
 
+	public bool ShowAllLayersOptionVisible => SettingsViewModel.ShowAllLayersOptionEnabled;
+
 	private void OnAddonSettingsChanged()
 	{
 		OnPropertyChanged(nameof(ShowAddonDuplicateFrameButton));
 		OnPropertyChanged(nameof(ShowAddonRotateCloneButton));
+		OnPropertyChanged(nameof(ShowAllLayersOptionVisible));
 	}
 
 	/// <summary>
@@ -1373,6 +1377,17 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 		set
 		{
 			if (!SetProperty(ref _showCropSize, value))
+				return;
+			RefreshAppearance();
+		}
+	}
+
+	public bool ShowAllLayers
+	{
+		get => _showAllLayers;
+		set
+		{
+			if (!SetProperty(ref _showAllLayers, value))
 				return;
 			RefreshAppearance();
 		}
@@ -2340,6 +2355,7 @@ public partial class FloatingThingEditorViewModel : PanelViewModelBase
 			ShowGrid = ShowGrid,
 			ShowDragGrid = _isAppearanceDragHover,
 			ShowCropSize = ShowCropSize,
+			ShowAllLayers = ShowAllLayers,
 			HighlightRect = highlightRect,
 			GridColor = AppearanceGridColorParser.Parse(SettingsViewModel.ThingEditorGridColor, new SkiaSharp.SKColor(80, 80, 80, 180)),
 			GridLineWidth = SettingsViewModel.ThingEditorGridLineWidth,

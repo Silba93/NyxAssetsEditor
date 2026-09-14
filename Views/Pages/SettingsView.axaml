@@ -339,6 +339,22 @@
 								   FontStyle="Italic" FontSize="11" Foreground="#666666"
 								   VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap" MaxWidth="360"/>
 					</StackPanel>
+
+					<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+						<TextBlock Text="Show all layers option:" VerticalAlignment="Center" Foreground="#CCCCCC" Width="220"/>
+						<CheckBox IsChecked="{Binding ShowAllLayersOptionEnabledSetting}"/>
+						<TextBlock Text="Displays a 'Show all layers' toggle in the Thing Editor appearance section to render all layers combined."
+								   FontStyle="Italic" FontSize="11" Foreground="#666666"
+								   VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap" MaxWidth="360"/>
+					</StackPanel>
+
+					<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+						<TextBlock Text="Show viewer scroll arrows:" VerticalAlignment="Center" Foreground="#CCCCCC" Width="220"/>
+						<CheckBox IsChecked="{Binding ShowViewerScrollArrowsEnabledSetting}"/>
+						<TextBlock Text="Displays quick top/bottom scroll overlay arrows in Things Viewer and Sprites Viewer."
+								   FontStyle="Italic" FontSize="11" Foreground="#666666"
+								   VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap" MaxWidth="360"/>
+					</StackPanel>
 				</StackPanel>
 			</Border>
 		</StackPanel>

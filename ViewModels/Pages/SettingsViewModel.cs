@@ -646,6 +646,32 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 		}
 
+		private static bool _showAllLayersOptionEnabled = false;
+		public static bool ShowAllLayersOptionEnabled
+		{
+			get => _showAllLayersOptionEnabled;
+			set
+			{
+				if (_showAllLayersOptionEnabled == value) return;
+				_showAllLayersOptionEnabled = value;
+				AddonSettingsChanged?.Invoke();
+				PersistenceService.SaveSettings();
+			}
+		}
+
+		private static bool _showViewerScrollArrowsEnabled = false;
+		public static bool ShowViewerScrollArrowsEnabled
+		{
+			get => _showViewerScrollArrowsEnabled;
+			set
+			{
+				if (_showViewerScrollArrowsEnabled == value) return;
+				_showViewerScrollArrowsEnabled = value;
+				AddonSettingsChanged?.Invoke();
+				PersistenceService.SaveSettings();
+			}
+		}
+
 		public static event Action? AddonSettingsChanged;
 
 		public enum LaunchSection
@@ -855,6 +881,32 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			}
 		}
 
+		public bool ShowAllLayersOptionEnabledSetting
+		{
+			get => ShowAllLayersOptionEnabled;
+			set
+			{
+				if (ShowAllLayersOptionEnabled != value)
+				{
+					ShowAllLayersOptionEnabled = value;
+					OnPropertyChanged();
+				}
+			}
+		}
+
+		public bool ShowViewerScrollArrowsEnabledSetting
+		{
+			get => ShowViewerScrollArrowsEnabled;
+			set
+			{
+				if (ShowViewerScrollArrowsEnabled != value)
+				{
+					ShowViewerScrollArrowsEnabled = value;
+					OnPropertyChanged();
+				}
+			}
+		}
+
 		public static event Action<int>? DefaultPageSizeChanged;
 		public static event Action<uint>? ThingIdOffsetChanged;
 		public static event Action<uint>? ClientVersionChanged;
@@ -896,6 +948,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			bool addonDuplicateFrameEnabled = false,
 			bool addonRotateCloneDirectionEnabled = false,
 			bool allowRelocatingDirection = false,
+			bool showAllLayersOptionEnabled = false,
+			bool showViewerScrollArrowsEnabled = false,
 			LaunchSection defaultLaunchSection = LaunchSection.Home,
 			string? lastAssetExportFormat = null,
 			string? lastAssetExportDirectory = null,
@@ -949,6 +1003,8 @@ namespace NyxAssetsEditor.ViewModels.Pages
 			_addonDuplicateFrameEnabled = addonDuplicateFrameEnabled;
 			_addonRotateCloneDirectionEnabled = addonRotateCloneDirectionEnabled;
 			_allowRelocatingDirection = allowRelocatingDirection;
+			_showAllLayersOptionEnabled = showAllLayersOptionEnabled;
+			_showViewerScrollArrowsEnabled = showViewerScrollArrowsEnabled;
 			_defaultLaunchSection = defaultLaunchSection;
 			_lastAssetExportFormat = NormalizeAssetExportFormat(lastAssetExportFormat, thingsFormats: true);
 			_lastAssetExportDirectory = lastAssetExportDirectory ?? "";
