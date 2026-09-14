@@ -371,6 +371,14 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 	private bool _isFlagsExpanded = true;
 
 	[ObservableProperty]
+	private string _flagSearchText = string.Empty;
+
+	partial void OnFlagSearchTextChanged(string value)
+	{
+		UpdateFilteredFlagFields();
+	}
+
+	[ObservableProperty]
 	private bool _isPatternsExpanded = true;
 
 	[ObservableProperty]
@@ -1167,6 +1175,22 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 		_extraPropertyKeys.AddRange(keys);
 	}
 
+	private readonly List<ThingFinderFieldViewModel> _allFlagFields = new();
+
+	private void UpdateFilteredFlagFields()
+	{
+		var query = FlagSearchText?.Trim();
+		if (string.IsNullOrEmpty(query))
+		{
+			Replace(FlagFields, _allFlagFields);
+		}
+		else
+		{
+			Replace(FlagFields, _allFlagFields.Where(f => f.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)));
+		}
+		OnPropertyChanged(nameof(HasFlagFields));
+	}
+
 	private void LoadFields()
 	{
 		if (!_fieldsByKind.TryGetValue(SelectedKind, out var fields))
@@ -1179,12 +1203,14 @@ public partial class FloatingThingFinderViewModel : PanelViewModelBase, IDisposa
 			SynchronizeExtraPropertyFields(fields);
 		}
 
+		_allFlagFields.Clear();
+		_allFlagFields.AddRange(fields.Where(field => IsFlagField(field.Descriptor)));
+
 		Replace(PropertyFields, fields.Where(field => IsPropertyField(field.Descriptor)));
-		Replace(FlagFields, fields.Where(field => IsFlagField(field.Descriptor)));
+		UpdateFilteredFlagFields();
 		Replace(PatternFields, fields.Where(field => field.Descriptor.Source == ThingFinderFieldSource.Pattern));
 		Replace(ExtraPropertyFields, fields.Where(field => field.Descriptor.Source == ThingFinderFieldSource.ExtraProperty));
 		OnPropertyChanged(nameof(HasExtraPropertyFields));
-		OnPropertyChanged(nameof(HasFlagFields));
 		OnPropertyChanged(nameof(HasPropertyFields));
 	}
 
