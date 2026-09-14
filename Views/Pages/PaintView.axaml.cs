@@ -51,6 +51,16 @@ namespace NyxAssetsEditor.Views.Pages
 			if (DataContext is not PaintViewModel vm)
 				return;
 
+			if (e.Key == Key.Delete || e.Key == Key.Back)
+			{
+				if (vm.HasSelection && vm.DeleteSelectionCommand.CanExecute(null))
+				{
+					vm.DeleteSelectionCommand.Execute(null);
+					e.Handled = true;
+					return;
+				}
+			}
+
 			if (_keybindings == null)
 				LoadKeybindings();
 
